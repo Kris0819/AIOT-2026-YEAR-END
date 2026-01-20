@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>2026 AIOT 尾牙賽馬 - 馬年行大運 </title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <style>
+        :root { --primary: #d32f2f; --gold: #ffd700; --track-bg: #2c3e50; --success: #4caf50; --warning: #ffeb3b; --danger: #ff5252; --recover: #00bcd4; --sprint: #ff5722; }
+        body { font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; background: #121212; color: white; margin: 0; padding: 10px; height: 100vh; display: flex; flex-direction: column; align-items: center; overflow: hidden; }
+        .setup-area { background: #1e1e1e; padding: 20px; border-radius: 20px; width: 95vw; max-width: 1200px; border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 100; overflow-y: auto; max-height: 80vh; }
+        .horse-select-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 15px; }
+        .horse-slot { background: linear-gradient(145deg, #252525, #1a1a1a); padding: 15px; border-radius: 12px; border: 2px solid #333; cursor: pointer; transition: 0.3s; position: relative; }
+        .horse-slot:hover { border-color: var(--gold); }
+        .horse-slot.selected { opacity: 0.5; filter: grayscale(0.8); pointer-events: none; border-color: #555; }
+        .selected-badge { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg); background: rgba(211, 47, 47, 0.9); color: white; padding: 5px 15px; border: 2px solid white; border-radius: 5px; font-weight: bold; z-index: 5; }
+        .track-container { position: relative; width: 98vw; flex-grow: 1; background: var(--track-bg); border: 4px solid #333; border-radius: 10px; display: none; margin-top: 20px; overflow: hidden; padding-top: 40px; }
+        .finish-line { position: absolute; right: 80px; top: 0; bottom: 0; width: 30px; background: repeating-linear-gradient(0deg, #fff, #fff 15px, #000 15px, #000 30px); border-left: 4px solid var(--gold); z-index: 1; }
+        .lane { position: relative; height: 9.8%; border-bottom: 1px dashed rgba(255,255,255,0.05); display: flex; align-items: center; }
+        .horse-container { position: absolute; left: 10px; z-index: 10; display: flex; align-items: center; width: 130px; }
+        .horse-icon { font-size: 32px; transform: scaleX(-1); margin-right: 5px; }
+        #start-btn { padding: 18px 80px; font-size: 26px; background: linear-gradient(135deg, var(--primary), #8e0000); color: white; border: none; border-radius: 50px; cursor: pointer; margin: 30px; display: none; font-weight: bold; }
+        #leaderboard { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 400px; background: white; color: #111; border-radius: 20px; padding: 25px; z-index: 200; display: none; border: 5px solid var(--gold); }
+        .admin-controls { position: fixed; bottom: 10px; left: 10px; z-index: 1000; display: none; }
+    </style>
+</head>
+<body>
+
+    <h2 id="main-title" style="margin: 10px; color: var(--gold); text-align:center;">💼 2026 AIOT 尾牙賽馬</h2>
+
+    <div id="setup" class="setup-area">
+        <h3 id="picker-title" style="margin:0; text-align: center; color: #fff;">請挑選你的馬匹 (先到先得)</h3>
+        <div class="horse-select-grid" id="select-grid"></div>
+    </div>
+
+    <button id="start-btn">🏁 開賽！(管理者專用)</button>
+
+    <div class="track-container" id="track">
+        <div class="finish-line"></div>
+        <div id="lanes-box" style="height: 100%;"></div>
+    </div>
+
+    <div id="leaderboard">
+        <h2 style="text-align:center; color: var(--primary);">🏆 FINAL RANK 🏆</h2>
+        <div id="leaderboard-list"></div>
+        <button onclick="resetGame()" style="width:100%; padding:10px; margin-top:10px; cursor:pointer;">重新開始(僅限管理者)</button>
+    </div>
+
+    <div class="admin-controls" id="admin-ui">
+        <button onclick="resetGame()" style="background: #444; color: white;">重置所有數據</button>
+    </div>
+
+<script>
+    // --- 1. 請替換成你的 Firebase 配置 ---
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        databaseURL: "YOUR_DATABASE_URL",
+        projectId: "YOUR_PROJECT_ID",
+        appId: "YOUR_APP_ID"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // --- 2. 核心參數 ---
+    const horseLibrary = [
+        { id: 0, trait: "薪水小偷", stats: {spd: 60, sta: 95, burst: 40}, desc: "懂得摸魚，穩定性高。" },
+        { id: 1, trait: "下班戰神", stats: {spd: 50, sta: 65, burst: 95}, desc: "後段發力，看到終點會瘋狂加速。" },
+        { id: 2, trait: "爆肝王", stats: {spd: 95, sta: 25, burst: 80}, desc: "起步超快，但如果不休息會爆肝。" },
+        { id: 3, trait: "會議發言機", stats: {spd: 75, sta: 60, burst: 60}, desc: "數值平均。" },
+        { id: 4, trait: "咖啡中毒者", stats: {spd: 80, sta: 45, burst: 75}, desc: "依賴咖啡因。" },
+        { id: 5, trait: "甩鍋專業戶", stats: {spd: 45, sta: 85, burst: 30}, desc: "免疫滑倒事件。" },
+        { id: 6, trait: "加班邊緣人", stats: {spd: 55, sta: 90, burst: 50}, desc: "耐力十足。" },
+        { id: 7, trait: "截稿衝刺", stats: {spd: 35, sta: 70, burst: 99}, desc: "隱藏王者。" },
+        { id: 8, trait: "出一張嘴", stats: {spd: 85, sta: 50, burst: 70}, desc: "高效率，給身邊人壓力。" },
+        { id: 9, trait: "中庸之道", stats: {spd: 70, sta: 75, burst: 65}, desc: "分配平衡。" }
+    ];
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const isAdmin = urlParams.get('admin') === '1';
+    let myName = localStorage.getItem('race_name') || "";
+    let isRacing = false;
+
+    if (isAdmin) document.getElementById('admin-ui').style.display = 'block';
+
+    // --- 3. 初始化與監聽 ---
+    function init() {
+        const grid = document.getElementById('select-grid');
+        grid.innerHTML = "";
+        horseLibrary.forEach((h, i) => {
+            const div = document.createElement('div');
+            div.className = 'horse-slot';
+            div.id = `slot-${i}`;
+            div.innerHTML = `<b>${h.trait}</b><div style="font-size:24px;">🐎</div><p style="font-size:10px;">${h.desc}</p>`;
+            div.onclick = () => selectHorse(i);
+            grid.appendChild(div);
+        });
+    }
+
+    // 監聽 Firebase 狀態
+    db.ref('race_data').on('value', (snapshot) => {
+        const data = snapshot.val() || { assignments: {}, status: 'waiting' };
+        
+        // 更新馬匹選擇狀態
+        horseLibrary.forEach((_, i) => {
+            const slot = document.getElementById(`slot-${i}`);
+            if (data.assignments && data.assignments[i]) {
+                slot.classList.add('selected');
+                if (!slot.querySelector('.selected-badge')) {
+                    slot.innerHTML += `<div class="selected-badge">${data.assignments[i].userName}</div>`;
+                }
+            } else {
+                slot.classList.remove('selected');
+                const badge = slot.querySelector('.selected-badge');
+                if (badge) badge.remove();
+            }
+        });
+
+        // 管理員顯示開始按鈕
+        if (isAdmin && data.status === 'waiting') {
+            document.getElementById('start-btn').style.display = 'block';
+        }
+
+        // 監聽是否開賽
+        if (data.status === 'racing' && !isRacing) {
+            runRace(data.seed, data.assignments);
+        }
+    });
+
+    // --- 4. 互動功能 ---
+    function selectHorse(idx) {
+        if (!myName) {
+            myName = prompt("請輸入您的姓名：");
+            if (!myName) return;
+            localStorage.setItem('race_name', myName);
+        }
+
+        db.ref(`race_data/assignments/${idx}`).transaction((current) => {
+            if (current === null) return { userName: myName };
+            return; // 已有人選
+        });
+    }
+
+    document.getElementById('start-btn').onclick = function() {
+        const seed = Math.random(); // 產生同步種子
+        db.ref('race_data/seed').set(seed);
+        db.ref('race_data/status').set('racing');
+    };
+
+    function resetGame() {
+        if (!isAdmin) return;
+        db.ref('race_data').set({ status: 'waiting', assignments: {} });
+        location.reload();
+    }
+
+    // --- 5. 賽馬邏輯 (同步執行) ---
+    function runRace(seed, assignments) {
+        isRacing = true;
+        document.getElementById('setup').style.display = 'none';
+        document.getElementById('start-btn').style.display = 'none';
+        document.getElementById('track').style.display = 'block';
+
+        const lanesBox = document.getElementById('lanes-box');
+        lanesBox.innerHTML = "";
+        
+        const participants = Object.keys(assignments).map(hIdx => ({
+            ...horseLibrary[hIdx],
+            owner: assignments[hIdx].userName,
+            pos: 10,
+            finished: false
+        }));
+
+        participants.forEach((p, i) => {
+            const lane = document.createElement('div');
+            lane.className = 'lane';
+            lane.innerHTML = `<div class="horse-container" id="horse-${p.id}"><div class="horse-icon">🐎</div><div>${p.owner}</div></div>`;
+            lanesBox.appendChild(lane);
+        });
+
+        // 使用 seed 來保證所有人跑的一樣 (簡單版：同步更新位移)
+        let timer = setInterval(() => {
+            let allFinished = true;
+            participants.forEach(p => {
+                if (p.pos < 800) {
+                    p.pos += (Math.random() * 5) + (p.stats.spd * 0.05); // 這裡實戰建議用 seed 函數
+                    document.getElementById(`horse-${p.id}`).style.left = p.pos + 'px';
+                    allFinished = false;
+                }
+            });
+            if (allFinished) {
+                clearInterval(timer);
+                alert("比賽結束！");
+            }
+        }, 50);
+    }
+
+    init();
+</script>
+</body>
+</html>
