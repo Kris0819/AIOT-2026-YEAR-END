@@ -2,159 +2,258 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 AIOT 尾牙賽馬 - 最終跑版修正版</title>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <title>2026 尾牙賽馬 - 職場純享版</title>
     <style>
-        :root { --primary: #d32f2f; --gold: #ffd700; --track-bg: #2c3e50; --success: #4caf50; --card-bg: #1e1e1e; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #121212; color: white; margin: 0; padding: 10px; height: 100vh; display: flex; flex-direction: column; align-items: center; overflow: hidden; }
+        :root { --primary: #d32f2f; --gold: #ffd700; --track-bg: #2c3e50; --success: #4caf50; --warning: #ffeb3b; --danger: #ff5252; --recover: #00bcd4; --sprint: #ff5722; }
+        body { font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; background: #121212; color: white; margin: 0; padding: 10px; height: 100vh; display: flex; flex-direction: column; align-items: center; overflow: hidden; }
         
-        /* 基礎顯示邏輯修正 */
-        .page-section { display: none; width: 100%; max-width: 500px; }
-        .active { display: block !important; }
+        /* 選馬畫面 */
+        .setup-area { background: #1e1e1e; padding: 20px; border-radius: 20px; width: 95vw; max-width: 1200px; border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 100; }
+        .horse-select-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 15px; }
+        .horse-slot { background: linear-gradient(145deg, #252525, #1a1a1a); padding: 15px; border-radius: 12px; border: 2px solid #333; cursor: pointer; transition: 0.3s; position: relative; overflow: hidden; }
+        .horse-slot:hover { border-color: var(--gold); transform: translateY(-5px); }
+        .horse-slot.selected { opacity: 0.15; filter: grayscale(1); pointer-events: none; }
+        
+        .trait-tag { font-size: 10px; background: var(--primary); color: white; padding: 2px 6px; border-radius: 4px; position: absolute; top: 10px; right: 10px; }
+        .stat-group { margin-top: 10px; }
+        .stat-row { display: flex; align-items: center; margin-top: 5px; font-size: 11px; }
+        .stat-label { width: 45px; color: #888; }
+        .stat-bar { flex-grow: 1; height: 6px; background: #000; border-radius: 3px; overflow: hidden; border: 1px solid #333; }
+        .stat-fill { height: 100%; background: linear-gradient(90deg, #444, var(--gold)); }
+        .horse-desc { font-size: 11px; color: #aaa; margin-top: 10px; line-height: 1.4; font-style: italic; }
 
-        /* 標題 */
-        h2 { margin: 10px 0; font-size: 1.4rem; color: var(--gold); text-align: center; }
+        /* 賽道區：稍微上移，因為沒有計時器了 */
+        .track-container { position: relative; width: 98vw; flex-grow: 1; background: var(--track-bg); border: 4px solid #333; border-radius: 10px; display: none; margin-top: 20px; overflow: hidden; padding-top: 40px; }
+        .finish-line { position: absolute; right: 80px; top: 0; bottom: 0; width: 30px; background: repeating-linear-gradient(0deg, #fff, #fff 15px, #000 15px, #000 30px); border-left: 4px solid var(--gold); z-index: 1; }
+        .lane { position: relative; height: 9.8%; border-bottom: 1px dashed rgba(255,255,255,0.05); display: flex; align-items: center; }
+        
+        .horse-container { position: absolute; left: 10px; z-index: 10; display: flex; align-items: center; width: 130px; transition: left 0.3s cubic-bezier(0.1, 0.7, 0.1, 1); }
+        .horse-icon { font-size: 32px; transform: scaleX(-1); margin-right: 5px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+        
+        .stamina-mini { width: 50px; height: 5px; background: #000; margin-top: 3px; border-radius: 2px; }
+        .stamina-mini-fill { height: 100%; background: var(--success); transition: width 0.3s; }
+        
+        .status-bubble { position: absolute; top: -42px; left: 0; font-size: 12px; padding: 4px 12px; border-radius: 12px; display: none; z-index: 100; font-weight: bold; color: white; border: 2px solid white; white-space: nowrap; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
 
-        /* 管理員齒輪 */
-        #admin-reset-tool { position: fixed; bottom: 15px; right: 15px; z-index: 9999; opacity: 0.3; display: none; }
-        .gear-btn { background: #333; border: 1px solid #555; color: white; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; font-size: 20px; }
-
-        /* 選人畫面 */
-        #user-login { background: var(--card-bg); padding: 20px; border-radius: 20px; text-align: center; border: 1px solid var(--gold); margin-top: 20px; }
-        .name-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .name-btn { padding: 15px; background: #333; border: 1px solid #555; color: white; border-radius: 12px; cursor: pointer; font-size: 16px; font-weight: bold; }
-        .name-btn.taken { opacity: 0.2; pointer-events: none; text-decoration: line-through; }
-
-        /* 選馬區 */
-        #setup { overflow-y: auto; flex-grow: 1; padding: 10px; }
-        .horse-slot { background: #252525; padding: 15px; border-radius: 12px; border: 1px solid #444; margin-bottom: 10px; cursor: pointer; position: relative; }
-        .horse-slot.occupied { opacity: 0.3; pointer-events: none; }
-        .horse-slot.my-pick { border: 2px solid var(--success); background: rgba(76,175,80,0.1); }
-        .occupied-label { position: absolute; right: 10px; top: 10px; background: var(--primary); color: white; padding: 2px 8px; font-size: 12px; border-radius: 4px; }
-
-        /* 管理者面板 */
-        #admin-dashboard { background: #222; padding: 20px; border-radius: 15px; border: 2px solid var(--gold); text-align: center; }
-        .ready-badge { background: var(--success); color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-left: 5px; }
-
-        /* 賽道 */
-        #track { position: relative; width: 100vw; flex-grow: 1; background: var(--track-bg); display: none; overflow: hidden; }
-        .finish-line { position: absolute; right: 60px; top: 0; bottom: 0; width: 20px; background: repeating-linear-gradient(0deg, #fff, #fff 10px, #000 10px, #000 20px); opacity: 0.3; }
-        .lane { position: relative; border-bottom: 1px solid rgba(255,255,255,0.05); height: 45px; }
-        .horse-container { position: absolute; left: 5px; display: flex; align-items: center; height: 100%; }
-        .horse-icon { font-size: 26px; transform: scaleX(-1); }
-        .horse-name { font-size: 11px; margin-left: 4px; white-space: nowrap; background: rgba(0,0,0,0.4); border-radius: 3px; padding: 1px 4px; }
-
-        /* 按鈕 */
-        .main-btn { width: 100%; padding: 18px; font-size: 20px; background: var(--primary); color: white; border: none; border-radius: 12px; font-weight: bold; margin-top: 15px; cursor: pointer; }
-
-        /* 排行榜 */
-        #leaderboard { position: fixed; inset: 0; background: white; color: #111; z-index: 1000; display: none; padding: 20px; }
-        .rank-row { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; font-weight: bold; }
+        #start-btn { padding: 18px 80px; font-size: 26px; background: linear-gradient(135deg, var(--primary), #8e0000); color: white; border: none; border-radius: 50px; cursor: pointer; margin: 30px; display: none; font-weight: bold; }
+        #leaderboard { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 400px; background: white; color: #111; border-radius: 20px; padding: 25px; z-index: 200; display: none; border: 5px solid var(--gold); }
     </style>
 </head>
 <body>
 
-    <div id="admin-reset-tool">
-        <button class="gear-btn" onclick="resetData()">⚙️</button>
+    <h2 id="main-title" style="margin: 10px; color: var(--gold); letter-spacing: 4px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">💼 2026 尾牙賽馬：職場馬拉松</h2>
+
+    <div id="setup" class="setup-area">
+        <h3 id="picker-title" style="margin:0; text-align: center; font-size: 20px; color: #fff;">請選擇角色</h3>
+        <div class="horse-select-grid" id="select-grid"></div>
     </div>
 
-    <h2>🐎 2026 AIOT 尾牙賽馬</h2>
+    <button id="start-btn">🏁 開賽！</button>
 
-    <div id="user-login" class="page-section">
-        <h3 style="margin-top:0">選擇您的名字</h3>
-        <div class="name-grid" id="name-grid"></div>
-    </div>
-
-    <div id="admin-dashboard" class="page-section">
-        <h3 style="margin-top:0; color:var(--gold)">管理者中控台</h3>
-        <div id="ready-status-list" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; text-align:left; margin-bottom:15px; font-size:14px;"></div>
-        <button class="main-btn" onclick="triggerStart()">🏁 全體開賽</button>
-    </div>
-
-    <div id="setup" class="page-section">
-        <h3 style="text-align:center; margin-top:0">挑選戰馬 (每匹限一人)</h3>
-        <div id="select-grid"></div>
-    </div>
-
-    <div id="track">
+    <div class="track-container" id="track">
         <div class="finish-line"></div>
-        <div id="lanes-box"></div>
+        <div id="lanes-box" style="height: 100%;"></div>
     </div>
 
     <div id="leaderboard">
-        <h1 style="text-align:center; color: var(--primary); margin-top: 40px;">🎊 賽事結果 🎊</h1>
-        <div id="leaderboard-list"></div>
-        <button onclick="location.reload()" class="main-btn" style="background:#333">回主畫面</button>
+        <h2 style="text-align:center; color: var(--primary); margin: 0; font-size: 32px;">🏆 FINAL RANK 🏆</h2>
+        <div id="leaderboard-list" style="margin-top: 20px;"></div>
+        <button onclick="location.reload()" style="width:100%; padding:15px; margin-top:20px; background: #1a1a1a; color: white; border-radius: 10px; cursor:pointer; font-weight: bold;">再跑一次</button>
     </div>
 
-    <audio id="bgm" loop src="https://actions.google.com/config/promo/sdk/v1/sample_audio/gameloop.m4a"></audio>
-    <audio id="snd-start" src="https://www.soundjay.com/misc/sounds/starting-pistol-1.mp3"></audio>
-    <audio id="snd-win" src="https://www.soundjay.com/human/sounds/applause-01.mp3"></audio>
-
 <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyBHJtwI42b8i6z7zRw6tDgtR4ITSNKWrf8",
-      authDomain: "aiot-d53dc.firebaseapp.com",
-      databaseURL: "https://aiot-d53dc-default-rtdb.firebaseio.com",
-      projectId: "aiot-d53dc",
-      storageBucket: "aiot-d53dc.firebasestorage.app",
-      messagingSenderId: "1021331253049",
-      appId: "1:1021331253049:web:11f0695e8ab64eae0baae8",
-      measurementId: "G-9YDKS70ZE7"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
     const horseLibrary = [
-        { id: 0, trait: "薪水小偷", spd: 62, desc: "穩定慢跑" },
-        { id: 1, trait: "下班戰神", spd: 50, desc: "後勁極強" },
-        { id: 2, trait: "爆肝王", spd: 98, desc: "起步神速" },
-        { id: 3, trait: "會議發言機", spd: 75, desc: "均速穩定" },
-        { id: 4, trait: "咖啡中毒", spd: 85, desc: "前期爆發" },
-        { id: 5, trait: "甩鍋專業戶", spd: 48, desc: "耐力持久" },
-        { id: 6, trait: "加班邊緣人", spd: 58, desc: "最後衝刺" },
-        { id: 7, trait: "截稿衝刺", spd: 40, desc: "隨機性大" },
-        { id: 8, trait: "出一張嘴", spd: 88, desc: "效率派" },
-        { id: 9, trait: "中庸之道", spd: 72, desc: "平衡型" }
+        { id: 0, trait: "薪水小偷", stats: {spd: 60, sta: 95, burst: 40}, desc: "懂得在工作中摸魚節省體力，穩定性最高。"},
+        { id: 1, trait: "下班戰神", stats: {spd: 50, sta: 65, burst: 95}, desc: "中後段發力，一旦看到終點線會瘋狂加速。"},
+        { id: 2, trait: "報帳急先鋒", stats: {spd: 95, sta: 25, burst: 80}, desc: "起步超快，但如果不休息絕對會爆肝。"},
+        { id: 3, trait: "會議發言機", stats: {spd: 75, sta: 60, burst: 60}, desc: "各項數值平均，適合穩打穩紮的玩家。"},
+        { id: 4, trait: "咖啡中毒者", stats: {spd: 80, sta: 45, burst: 75}, desc: "依賴咖啡因（隨機衝刺），體力波動大。"},
+        { id: 5, trait: "甩鍋專業戶", stats: {spd: 45, sta: 85, burst: 30}, desc: "運氣型馬匹，能完全免疫滑倒事件。"},
+        { id: 6, trait: "加班邊緣人", stats: {spd: 55, sta: 90, burst: 50}, desc: "存在感低但耐力十足，默默爬上首位。"},
+        { id: 7, trait: "老闆親信", stats: {spd: 35, sta: 70, burst: 99}, desc: "隱藏王者，雖然慢但極易觸發神級衝刺。"},
+        { id: 8, trait: "PM 催稿員", stats: {spd: 85, sta: 50, burst: 70}, desc: "高效率代表，會一直給身邊的人壓力。"},
+        { id: 9, trait: "Excel 魔法師", stats: {spd: 70, sta: 75, burst: 65}, desc: "數據平衡之王，體力分配非常科學。"}
     ];
 
     let names = ["JULIA", "MOLLY", "DON", "豪哥", "Gimme", "Erick", "韋志", "JULI", "JASON", "KRIS"];
+    let currentNameIndex = 0, selectedAssignments = [], finishedHorses = [];
     const colors = ["#FF5252", "#FFD700", "#E040FB", "#00E676", "#2979FF", "#FF9100", "#40C4FF", "#FF1744", "#F4FF81", "#B2FF59"];
 
-    let myName = "";
-    const isAdmin = new URLSearchParams(window.location.search).get('admin') === '1';
-    let raceStarted = false;
-    let finishedHorses = [];
-
-    function init() {
-        // 第一步：決定顯示哪個 Page Section
-        if (isAdmin) {
-            document.getElementById('admin-dashboard').classList.add('active');
-            document.getElementById('admin-reset-tool').style.display = 'block';
-        } else {
-            document.getElementById('user-login').classList.add('active');
-        }
-
-        // 生成 UI 內容
-        const nameGrid = document.getElementById('name-grid');
-        names.forEach(n => {
-            const btn = document.createElement('button');
-            btn.className = 'name-btn'; btn.id = `name-${n}`; btn.innerText = n;
-            btn.onclick = () => login(n);
-            nameGrid.appendChild(btn);
-        });
-
-        const horseGrid = document.getElementById('select-grid');
+    function initSetup() {
+        const grid = document.getElementById('select-grid');
+        document.getElementById('picker-title').innerText = `請 【${names[0]}】 挑選角色`;
         horseLibrary.forEach((h, i) => {
             const div = document.createElement('div');
-            div.className = 'horse-slot'; div.id = `slot-${i}`;
-            div.innerHTML = `<div><b style="color:var(--gold); font-size:16px;">${h.trait}</b><div style="font-size:12px; color:#aaa">${h.desc}</div></div>`;
+            div.className = 'horse-slot';
+            div.id = `slot-${i}`;
+            div.innerHTML = `
+                <div class="trait-tag">STAFF-${i+1}</div>
+                <div style="font-size:28px; transform: scaleX(-1);">🐎</div>
+                <b style="color:var(--gold); font-size:16px;">${h.trait}</b>
+                <div class="stat-group">
+                    <div class="stat-row"><span class="stat-label">效率</span><div class="stat-bar"><div class="stat-fill" style="width:${h.stats.spd}%"></div></div></div>
+                    <div class="stat-row"><span class="stat-label">體力</span><div class="stat-bar"><div class="stat-fill" style="width:${h.stats.sta}%"></div></div></div>
+                    <div class="stat-row"><span class="stat-label">爆發</span><div class="stat-bar"><div class="stat-fill" style="width:${h.stats.burst}%"></div></div></div>
+                </div>
+                <div class="horse-desc">${h.desc}</div>
+            `;
             div.onclick = () => selectHorse(i);
-            horseGrid.appendChild(div);
+            grid.appendChild(div);
         });
-
-        listenFirebase();
     }
+
+    function selectHorse(idx) {
+        if (document.getElementById(`slot-${idx}`).classList.contains('selected')) return;
+        selectedAssignments.push({ name: names[currentNameIndex], horseData: horseLibrary[idx] });
+        document.getElementById(`slot-${idx}`).classList.add('selected');
+        currentNameIndex++;
+        if (currentNameIndex < names.length) {
+            document.getElementById('picker-title').innerText = `請 【${names[currentNameIndex]}】 挑選角色`;
+        } else {
+            document.getElementById('setup').style.display = 'none';
+            document.getElementById('start-btn').style.display = 'block';
+            prepareTrack();
+        }
+    }
+
+    function prepareTrack() {
+        const lanesBox = document.getElementById('lanes-box');
+        document.getElementById('track').style.display = 'block';
+        selectedAssignments.forEach((item, idx) => {
+            const lane = document.createElement('div');
+            lane.className = 'lane';
+            lane.innerHTML = `<div class="horse-container" id="horse-${item.horseData.id}"><div class="status-bubble" id="status-${item.horseData.id}"></div><div class="horse-icon" style="color:${colors[idx]}">🐎</div><div class="horse-info-mini"><div class="horse-label" style="font-size:12px;">${item.name}</div><div class="stamina-mini"><div class="stamina-mini-fill" id="stamina-fill-${item.horseData.id}"></div></div></div></div>`;
+            lanesBox.appendChild(lane);
+        });
+    }
+
+    function updateBubble(id, text, color, display = true) {
+        const el = document.getElementById(`status-${id}`);
+        if (!el) return;
+        if (!display) { el.style.display = 'none'; return; }
+        el.innerText = text; el.style.display = 'block'; el.style.background = color;
+    }
+
+    document.getElementById('start-btn').onclick = function() {
+        this.style.display = 'none';
+        startRace();
+    };
+
+    function startRace() {
+        const horses = selectedAssignments.map(item => ({ 
+            ...item.horseData, ownerName: item.name, 
+            pos: 10, speed: 0, currStamina: 100, 
+            lastEventTime: Date.now() + (Math.random() * 2000),
+            nextCooldown: 4000 + (Math.random() * 4000),
+            finished: false, isStalled: false, isBursting: false 
+        }));
+        
+        const finishLinePos = document.getElementById('track').offsetWidth - 130; 
+        const raceStart = Date.now();
+
+        const raceInterval = setInterval(() => {
+            const raceElapsed = (Date.now() - raceStart) / 1000;
+
+            horses.forEach(h => {
+                if (h.finished) return;
+
+                // 消耗邏輯
+                if (!h.isStalled) {
+                    let drainMult = h.id === 2 ? 1.8 : (h.id === 0 ? 0.45 : 1.0);
+                    let staminaDrain = (h.speed * 0.06 + 0.12) * drainMult; 
+                    h.currStamina = Math.max(0, h.currStamina - staminaDrain);
+                }
+
+                // 爆肝倒數
+                if (h.currStamina <= 0 && !h.isStalled) {
+                    h.speed = 0; h.isStalled = true; h.isBursting = false;
+                    let count = 5;
+                    const burnTimer = setInterval(() => {
+                        updateBubble(h.id, `🤮 爆肝中...${count}`, "var(--danger)");
+                        count--;
+                        if (count < 0) {
+                            clearInterval(burnTimer);
+                            h.currStamina = 100; h.isStalled = false;
+                            updateBubble(h.id, "", "", false);
+                        }
+                    }, 1000);
+                }
+
+                let isRedZone = h.currStamina < 20;
+                let fatigueScale = isRedZone ? 0.4 : (h.currStamina < 50 ? 0.8 : 1.0);
+                
+                if (!h.isStalled) {
+                    let accel = (Math.random() * 0.22);
+                    
+                    // 下班戰神爆發 (約 20 秒後啟動)
+                    if (h.id === 1 && raceElapsed >= 15) { 
+                        accel += 2.8; fatigueScale = 1.1; 
+                        if (!h.isBursting) { h.isBursting = true; updateBubble(h.id, "🔥 極限衝刺！", "var(--sprint)"); }
+                    }
+
+                    h.speed = ((h.speed * 0.93) + accel + (h.stats.spd * 0.002)) * fatigueScale;
+                }
+
+                // 隨機事件
+                if (Date.now() - h.lastEventTime > h.nextCooldown && !h.finished && !h.isStalled) {
+                    h.lastEventTime = Date.now();
+                    h.nextCooldown = 4000 + (Math.random() * 4000);
+                    const roll = Math.random();
+
+                    if (roll < 0.12 && h.id !== 5) { 
+                        // 滑倒後退
+                        h.speed = 0; h.pos = Math.max(10, h.pos - 40);
+                        updateBubble(h.id, "⛸️ 滑倒了！", "#546e7a");
+                        setTimeout(() => updateBubble(h.id, "", "", false), 1500);
+                    } else if (roll < (isRedZone ? 0.4 : 0.2)) { 
+                        // 偷懶 zzzz...
+                        h.speed = 0; h.isStalled = true; 
+                        h.currStamina = Math.min(100, h.currStamina + 45); 
+                        updateBubble(h.id, "🛌 zzzz...", "var(--recover)");
+                        setTimeout(() => { h.isStalled = false; updateBubble(h.id, "", "", false); }, 2000);
+                    } else if (roll > 0.75 && !isRedZone) {
+                        // ⚡ 衝刺！
+                        h.isBursting = true;
+                        updateBubble(h.id, "⚡ 衝刺！", "var(--sprint)");
+                        setTimeout(() => { h.isBursting = false; updateBubble(h.id, "", "", false); }, 2000);
+                    }
+                }
+
+                h.pos += h.speed + (h.isBursting ? 0.9 : 0);
+                const element = document.getElementById(`horse-${h.id}`);
+                element.style.left = Math.min(h.pos, finishLinePos + 40) + 'px';
+                
+                const sFill = document.getElementById(`stamina-fill-${h.id}`);
+                sFill.style.width = `${h.currStamina}%`;
+                sFill.style.background = isRedZone ? 'var(--danger)' : (h.currStamina < 50 ? 'var(--warning)' : 'var(--success)');
+                
+                let rot = Math.sin(h.pos / 10) * (h.speed * 2);
+                if (h.isBursting) rot *= 1.5;
+                element.style.transform = `rotate(${rot}deg)`;
+
+                if (h.pos >= finishLinePos && !h.finished) {
+                    h.finished = true;
+                    finishedHorses.push(h);
+                    if (finishedHorses.length === 10) {
+                        clearInterval(raceInterval);
+                        setTimeout(showLeaderboard, 1000);
+                    }
+                }
+            });
+        }, 50);
+    }
+
+    function showLeaderboard() {
+        document.getElementById('leaderboard').style.display = 'block';
+        const list = document.getElementById('leaderboard-list');
+        finishedHorses.forEach((h, i) => {
+            const item = document.createElement('div');
+            item.style.cssText = "padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; font-weight:bold;";
+            item.innerHTML = `<span><span style="color:var(--primary)">#${i+1}</span> ${h.ownerName}</span> <span style="color:#666; font-size:12px;">${h.trait}</span>`;
+            list.appendChild(item);
+        });
+    }
+    initSetup();
+</script>
+</body>
+</html>
