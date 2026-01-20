@@ -3,111 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AIOT 2026 尾牙賽馬</title>
+    <title>AIOT 2026 賽馬管理系統</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
-        :root { 
-            --gold: #FFD700; --red: #E91E63; --dark: #121212; 
-            --card: #1E1E1E; --accent: #00E5FF;
-        }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { 
-            font-family: -apple-system, 'PingFang TC', sans-serif;
-            background: var(--dark); color: white; margin: 0; padding: 0;
-            overflow-x: hidden;
-        }
+        :root { --gold: #FFD700; --red: #ff4757; --dark: #121212; --card: #1e1e1e; --success: #2ed573; }
+        * { box-sizing: border-box; font-family: -apple-system, sans-serif; }
+        body { background: var(--dark); color: white; margin: 0; padding-bottom: 50px; }
 
-        /* 手機端導航欄 */
-        .mobile-header {
-            padding: 15px; text-align: center; background: #000;
-            border-bottom: 2px solid var(--gold); sticky: top; top: 0; z-index: 100;
+        /* 管理員專用面板 */
+        #admin-panel { 
+            background: var(--red); padding: 10px; text-align: center; 
+            position: sticky; top: 0; z-index: 1000; display: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
+        .admin-btn { background: white; color: var(--red); border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; margin: 0 5px; }
 
-        /* 選人與選馬卡片 */
-        .container { padding: 15px; padding-bottom: 50px; }
+        .container { padding: 15px; }
+        .title { text-align: center; color: var(--gold); margin: 20px 0; }
+
+        /* 選馬卡片優化 */
+        .horse-list { display: grid; grid-template-columns: 1fr; gap: 15px; }
         .horse-card {
-            background: var(--card); border-radius: 15px; padding: 15px;
-            margin-bottom: 15px; border: 2px solid #333; transition: 0.3s;
-            position: relative;
+            background: var(--card); border-radius: 12px; padding: 20px;
+            border: 2px solid #333; position: relative; transition: 0.3s;
         }
-        .horse-card.selected { border-color: var(--gold); background: #2a2a10; }
-        .horse-card.taken { opacity: 0.5; pointer-events: none; grayscale: 1; }
-
-        .stat-row { display: flex; align-items: center; margin: 5px 0; font-size: 13px; }
-        .stat-label { width: 40px; color: #888; }
-        .stat-bar-bg { flex: 1; height: 6px; background: #000; border-radius: 3px; margin: 0 10px; }
-        .stat-fill { height: 100%; border-radius: 3px; transition: width 0.5s; }
-
-        /* 賽道 - 垂直模式優化 */
-        #track { 
-            display: none; height: calc(100vh - 80px); background: #1a1a1a;
-            position: relative; overflow: hidden;
-        }
-        .lane {
-            position: relative; width: 100%; border-bottom: 1px solid #333;
-            display: flex; align-items: center;
-        }
-        .horse-sprite {
-            position: absolute; width: 50px; text-align: center;
-            transition: left 0.1s linear;
-        }
-        .finish-gate {
-            position: absolute; right: 60px; top: 0; bottom: 0;
-            width: 20px; background: repeating-linear-gradient(0deg, #fff 0 10px, #000 10px 20px);
+        .horse-card.selected { border-color: var(--success); background: #1a2e23; }
+        .horse-card.occupied { opacity: 0.6; filter: grayscale(0.8); pointer-events: none; }
+        
+        .occupant-tag {
+            position: absolute; top: 10px; right: 10px;
+            background: var(--gold); color: black; padding: 4px 8px;
+            border-radius: 4px; font-size: 12px; font-weight: bold;
         }
 
-        /* 浮動公告 */
-        #status-msg {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 20px;
-            border: 1px solid var(--gold); z-index: 1000; font-size: 14px; display: none;
-        }
+        .stat-bar-bg { width: 100%; height: 8px; background: #000; border-radius: 4px; margin-top: 5px; }
+        .stat-fill { height: 100%; border-radius: 4px; transition: width 1s; }
 
-        /* 登入 Grid */
-        .login-grid {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+        /* 姓名選擇區 */
+        .name-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .name-btn { 
+            padding: 15px; background: #2f3542; border: none; color: white; 
+            border-radius: 8px; font-size: 16px; font-weight: bold;
         }
-        .login-btn {
-            padding: 20px; background: #333; border-radius: 10px; border: none;
-            color: white; font-weight: bold; font-size: 16px;
-        }
-        .login-btn.taken { background: #111; color: #555; }
+        .name-btn.taken { background: #1e1e1e; color: #555; pointer-events: none; }
+        .name-btn.me { background: var(--success); box-shadow: 0 0 10px var(--success); }
     </style>
 </head>
 <body>
 
-    <div class="mobile-header">
-        <h2 style="margin:0; font-size: 18px; color: var(--gold);">🐎 AIOT 2026 馬年競速</h2>
-        <div id="user-display" style="font-size: 12px; color: #888;">尚未登入</div>
+    <div id="admin-panel">
+        <span style="font-size:12px;">🛡️ 管理員模式:</span>
+        <button class="admin-btn" onclick="resetGame()">🧹 重置全場</button>
+        <button class="admin-btn" onclick="startRace()">🏁 開賽</button>
     </div>
 
     <div id="view-login" class="container">
-        <h3 style="text-align:center;">選擇您的身份</h3>
-        <div class="login-grid" id="login-grid"></div>
+        <h2 class="title">身份確認</h2>
+        <div class="name-grid" id="name-grid"></div>
     </div>
 
     <div id="view-setup" class="container" style="display:none;">
-        <h3 style="text-align:center; color: var(--gold);">挑選參賽戰馬</h3>
-        <div id="horse-list"></div>
-        <button id="admin-start" style="display:none; width:100%; padding:20px; background:var(--red); border:none; color:white; border-radius:15px; font-weight:bold; font-size:18px; margin-top:20px;">我是管理員，開啟比賽！</button>
+        <h2 class="title">挑選戰馬 (一人一馬)</h2>
+        <div class="horse-list" id="horse-list"></div>
     </div>
-
-    <div id="track">
-        <div class="finish-gate"></div>
-        <div id="lanes-container" style="height:100%;"></div>
-    </div>
-
-    <div id="leaderboard" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:2000; padding:40px;">
-        <h1 style="text-align:center; color:var(--gold);">🏆 比賽結束</h1>
-        <div id="rank-list"></div>
-        <button onclick="location.reload()" style="width:100%; margin-top:30px; padding:15px; border-radius:10px;">回首頁</button>
-    </div>
-
-    <div id="status-msg"></div>
 
 <script>
-    // --- Firebase Config (User Saved) ---
+    // --- Firebase 配置 ---
     const firebaseConfig = {
       apiKey: "AIzaSyBHJtwI42b8i6z7zRw6tDgtR4ITSNKWrf8",
       authDomain: "aiot-d53dc.firebaseapp.com",
@@ -121,100 +83,100 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // --- 遊戲邏輯資料 ---
     const horseLibrary = [
-        { id: 0, trait: "薪水小偷", spd: 50, sta: 90, str: 30, color: "#4CAF50", desc: "穩定輸出，完全不會累" },
-        { id: 1, trait: "下班戰神", spd: 40, sta: 50, str: 99, color: "#FF5722", desc: "最後階段爆發力全場第一" },
-        { id: 2, trait: "爆肝王", spd: 90, sta: 20, str: 70, color: "#E91E63", desc: "起步極快，但體力容易見底" },
-        { id: 3, trait: "咖啡中毒", spd: 70, sta: 40, str: 80, color: "#00BCD4", desc: "速度隨機跳動，充滿不確定性" },
-        { id: 4, trait: "甩鍋專家", spd: 60, sta: 70, str: 40, color: "#FFEB3B", desc: "免疫所有負面減速事件" }
+        { id: 0, trait: "薪水小偷", spd: 55, sta: 95, color: "#2ed573", desc: "體力極好，適合長跑" },
+        { id: 1, trait: "下班戰神", spd: 45, sta: 60, color: "#ffa502", desc: "最後衝刺會啟動狂暴模式" },
+        { id: 2, trait: "爆肝王", spd: 95, sta: 20, color: "#ff4757", desc: "初期極快，但極速消耗體力" },
+        { id: 3, trait: "咖啡中毒", spd: 75, sta: 45, color: "#1e90ff", desc: "速度起伏大，充滿驚喜" },
+        { id: 4, trait: "甩鍋專家", spd: 60, sta: 70, color: "#eccc68", desc: "穩定型馬匹，無視負面事件" }
     ];
 
-    let names = ["JULIA", "MOLLY", "DON", "豪哥", "Gimme", "Erick", "韋志", "JULI", "JASON", "KRIS"];
+    const names = ["JULIA", "MOLLY", "DON", "豪哥", "Gimme", "Erick", "韋志", "JULI", "JASON", "KRIS"];
     let myName = "";
     const isAdmin = new URLSearchParams(window.location.search).get('admin') === '1';
 
-    // --- 初始化 UI ---
     function init() {
-        // 渲染登入按鈕
-        const grid = document.getElementById('login-grid');
+        if (isAdmin) document.getElementById('admin-panel').style.display = 'block';
+
+        // 初始化姓名列表
+        const nameGrid = document.getElementById('name-grid');
         names.forEach(n => {
-            const b = document.createElement('button');
-            b.className = 'login-btn'; b.id = `user-${n}`; b.innerText = n;
-            b.onclick = () => login(n);
-            grid.appendChild(b);
+            const btn = document.createElement('button');
+            btn.className = 'name-btn'; btn.id = `user-btn-${n}`; btn.innerText = n;
+            btn.onclick = () => login(n);
+            nameGrid.appendChild(btn);
         });
 
-        // 渲染馬匹卡片
-        const hList = document.getElementById('horse-list');
+        // 初始化馬匹列表
+        const list = document.getElementById('horse-list');
         horseLibrary.forEach((h, i) => {
             const card = document.createElement('div');
-            card.className = 'horse-card'; card.id = `hcard-${i}`;
+            card.className = 'horse-card'; card.id = `h-card-${i}`;
             card.innerHTML = `
-                <div style="display:flex; justify-content:space-between;">
-                    <b style="color:var(--gold); font-size:18px;">${h.trait}</b>
-                    <span style="font-size:24px;">🐎</span>
-                </div>
-                <div class="stat-row"><span class="stat-label">效率</span><div class="stat-bar-bg"><div class="stat-fill" style="width:${h.spd}%; background:var(--accent);"></div></div></div>
-                <div class="stat-row"><span class="stat-label">續航</span><div class="stat-bar-bg"><div class="stat-fill" style="width:${h.sta}%; background:#4CAF50;"></div></div></div>
-                <p style="margin:5px 0 0; font-size:12px; color:#888;">特技：${h.desc}</p>
+                <div id="tag-${i}"></div>
+                <div style="font-size:20px; font-weight:bold; color:var(--gold);">${h.trait}</div>
+                <div style="font-size:12px; color:#aaa; margin-bottom:10px;">${h.desc}</div>
+                <div style="font-size:12px;">速度</div>
+                <div class="stat-bar-bg"><div class="stat-fill" style="width:${h.spd}%; background:${h.color};"></div></div>
+                <div style="font-size:12px; margin-top:5px;">耐力</div>
+                <div class="stat-bar-bg"><div class="stat-fill" style="width:${h.sta}%; background:#555;"></div></div>
             `;
             card.onclick = () => selectHorse(i);
-            hList.appendChild(card);
+            list.appendChild(card);
         });
 
-        if(isAdmin) document.getElementById('admin-start').style.display = 'block';
-        
-        listenFirebase();
+        syncFirebase();
     }
 
-    // --- Firebase 即時監聽 (核心同步區) ---
-    function listenFirebase() {
-        // 1. 監聽使用者登入
+    // --- 核心同步邏輯 ---
+    function syncFirebase() {
+        // 監聽所有人的選馬狀態
+        db.ref('assignments').on('value', snap => {
+            const data = snap.val() || {};
+            // 先重置所有卡片狀態
+            document.querySelectorAll('.horse-card').forEach(c => {
+                c.classList.remove('occupied', 'selected');
+                const tag = c.querySelector('[id^="tag-"]');
+                if(tag) tag.innerHTML = '';
+            });
+
+            // 標記已被選走的馬
+            Object.entries(data).forEach(([user, horseIdx]) => {
+                const card = document.getElementById(`h-card-${horseIdx}`);
+                const tag = document.getElementById(`tag-${horseIdx}`);
+                if(card) {
+                    if (user === myName) {
+                        card.classList.add('selected');
+                        tag.innerHTML = `<span class="occupant-tag">你的馬</span>`;
+                    } else {
+                        card.classList.add('occupied');
+                        tag.innerHTML = `<span class="occupant-tag">騎士: ${user}</span>`;
+                    }
+                }
+            });
+        });
+
+        // 監聽使用者登入
         db.ref('users').on('value', snap => {
             const data = snap.val() || {};
             names.forEach(n => {
-                const b = document.getElementById(`user-${n}`);
-                if(data[n]) b.classList.add('taken');
+                const btn = document.getElementById(`user-btn-${n}`);
+                if (data[n]) {
+                    btn.classList.add('taken');
+                    if (n === myName) btn.classList.add('me');
+                } else {
+                    btn.classList.remove('taken', 'me');
+                }
             });
-            if(data[myName]) {
+            if (data[myName]) {
                 document.getElementById('view-login').style.display = 'none';
                 document.getElementById('view-setup').style.display = 'block';
-                document.getElementById('user-display').innerText = `你好，${myName}`;
+            } else {
+                // 如果管理員清空了資料，強制跳回登入
+                document.getElementById('view-login').style.display = 'block';
+                document.getElementById('view-setup').style.display = 'none';
+                myName = "";
             }
-        });
-
-        // 2. 監聽選馬鎖定
-        db.ref('assignments').on('value', snap => {
-            const data = snap.val() || {};
-            document.querySelectorAll('.horse-card').forEach(c => c.classList.remove('selected', 'taken'));
-            Object.entries(data).forEach(([u, hIdx]) => {
-                if(u === myName) document.getElementById(`hcard-${hIdx}`).classList.add('selected');
-                else document.getElementById(`hcard-${hIdx}`).classList.add('taken');
-            });
-        });
-
-        // 3. 監聽比賽同步座標 (最重要的同步機制)
-        db.ref('raceData/positions').on('value', snap => {
-            const positions = snap.val();
-            if(!positions) return;
-            
-            // 如果比賽沒在畫面上，強制切換
-            if(document.getElementById('track').style.display === 'none') {
-                switchToTrack(Object.keys(positions));
-            }
-
-            // 更新馬匹座標
-            Object.entries(positions).forEach(([idx, pos]) => {
-                const el = document.getElementById(`horse-box-${idx}`);
-                if(el) el.style.left = `${pos}%`;
-            });
-        });
-
-        // 4. 監聽排名結果
-        db.ref('raceData/results').on('value', snap => {
-            const results = snap.val();
-            if(results) showLeaderboard(results);
         });
     }
 
@@ -223,71 +185,34 @@
         db.ref(`users/${n}`).set(true);
     }
 
-    function selectHorse(i) {
-        db.ref(`assignments/${myName}`).set(i);
-    }
-
-    function switchToTrack(ids) {
-        document.getElementById('view-setup').style.display = 'none';
-        document.getElementById('track').style.display = 'block';
-        const container = document.getElementById('lanes-container');
-        container.innerHTML = '';
-        
+    function selectHorse(idx) {
+        if (!myName) return;
+        // 先檢查這匹馬有沒有人選 (防止手速競爭)
         db.ref('assignments').once('value', snap => {
-            const assigns = snap.val();
-            ids.forEach(idx => {
-                const owner = Object.keys(assigns).find(u => assigns[u] == idx);
-                const hData = horseLibrary[idx];
-                const lane = document.createElement('div');
-                lane.className = 'lane'; lane.style.height = `${100/ids.length}%`;
-                lane.innerHTML = `
-                    <div class="horse-sprite" id="horse-box-${idx}" style="left:0;">
-                        <div style="font-size:10px; white-space:nowrap;">${owner}</div>
-                        <div style="font-size:25px; color:${hData.color}">🐎</div>
-                    </div>
-                `;
-                container.appendChild(lane);
-            });
+            const data = snap.val() || {};
+            const isTaken = Object.values(data).includes(idx);
+            const myOldPick = data[myName];
+
+            if (isTaken && myOldPick !== idx) {
+                alert("慢了一步！這匹馬剛被選走了。");
+            } else {
+                db.ref(`assignments/${myName}`).set(idx);
+            }
         });
     }
 
-    // --- 管理員引擎：統一計算座標 ---
-    document.getElementById('admin-start').onclick = () => {
-        db.ref('assignments').once('value', snap => {
-            const participants = snap.val() || {};
-            const horseIds = Object.values(participants);
-            const states = horseIds.map(id => ({ id, pos: 0, speed: 1 + Math.random(), finished: false }));
-            
-            let startTime = Date.now();
-            const engine = setInterval(() => {
-                const updates = {};
-                let allFinished = true;
+    // --- 管理員功能 ---
+    function resetGame() {
+        if (confirm("【警告】將重置所有玩家登入狀態與選馬結果，確定嗎？")) {
+            db.ref().set(null); // 清空全域
+            alert("數據已清空");
+        }
+    }
 
-                states.forEach(s => {
-                    if(!s.finished) {
-                        // 這裡可以加入更複雜的根據 horseLibrary 屬性計算的邏輯
-                        s.pos += (Math.random() * 1.5); 
-                        if(s.pos >= 90) { s.pos = 90; s.finished = true; }
-                        else allFinished = false;
-                    }
-                    updates[s.id] = s.pos;
-                });
-
-                db.ref('raceData/positions').set(updates);
-
-                if(allFinished) {
-                    clearInterval(engine);
-                    // 根據結束時間排序並寫入結果...
-                    db.ref('raceData/results').set(states.map(s => ({ id: s.id, name: "獎項待領" })));
-                }
-            }, 100);
-        });
-    };
-
-    function showLeaderboard(data) {
-        const lb = document.getElementById('leaderboard');
-        lb.style.display = 'block';
-        // 渲染排行...
+    function startRace() {
+        // 跳轉到賽馬畫面邏輯
+        alert("準備開賽！(正在啟動同步引擎)");
+        // 這裡可以呼叫之前的賽馬 UI 邏輯...
     }
 
     init();
