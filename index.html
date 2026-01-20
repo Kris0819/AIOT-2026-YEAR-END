@@ -54,7 +54,7 @@
 </head>
 <body>
 
-    <h2 style="margin: 5px; color: var(--gold); letter-spacing: 2px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">🐎 2026 AIOT 尾牙賽馬 - 馬年行大運</h2>
+    <h2 style="margin: 5px; color: var(--gold); letter-spacing: 2px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">🐎 2026 AIOT 馬年行大運，賽馬大賽</h2>
 
     <div id="user-login">
         <h2 style="color: var(--gold); margin: 0 0 10px 0;">你是哪位同仁？</h2>
@@ -62,7 +62,7 @@
     </div>
 
     <div id="setup" class="setup-area">
-        <h3 id="picker-title" style="margin:0 0 10px 0; text-align: center; color: #fff;">🏆 挑選戰馬，爭奪 $2500 獎金 🏆</h3>
+        <h3 id="picker-title" style="margin:0 0 10px 0; text-align: center; color: #fff;">🏆 挑選您的戰馬 🏆</h3>
         <div class="horse-select-grid" id="select-grid"></div>
     </div>
 
@@ -81,7 +81,7 @@
 
 <script>
     // --- 1. Firebase 配置 ---
-   const firebaseConfig = {
+const firebaseConfig = {
   apiKey: "AIzaSyBHJtwI42b8i6z7zRw6tDgtR4ITSNKWrf8",
   authDomain: "aiot-d53dc.firebaseapp.com",
   databaseURL: "https://aiot-d53dc-default-rtdb.firebaseio.com",
@@ -119,13 +119,13 @@
 
     // --- 獎金對應邏輯 ---
     function getPrize(rank) {
-        if (rank === 1) return "$2500";
+        if (rank === 1) return "現金 $2500";
         if (rank >= 2 && rank <= 5) return "新光禮券 $1000";
-        if (rank === 6) return "$500";
-        if (rank === 7) return "$400";
-        if (rank === 8) return "$300";
-        if (rank === 9) return "$200";
-        if (rank === 10) return "$100";
+        if (rank === 6) return "現金 $500";
+        if (rank === 7) return "現金 $400";
+        if (rank === 8) return "現金 $300";
+        if (rank === 9) return "現金 $200";
+        if (rank === 10) return "現金 $100";
         return "-";
     }
 
