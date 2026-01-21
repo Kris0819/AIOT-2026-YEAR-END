@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>2026 AIOT 尾牙賽馬 - 獎金頒獎優化版 </title>
+    <title>2026 AIOT 尾牙賽馬 - 管理員測試版 </title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
@@ -48,8 +48,7 @@
         .status-bubble { position: absolute; top: -42px; left: 0; font-size: 12px; padding: 4px 12px; border-radius: 12px; display: none; z-index: 100; font-weight: bold; color: white; border: 2px solid white; white-space: nowrap; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
 
         #start-btn { padding: 18px 80px; font-size: 26px; background: linear-gradient(135deg, var(--primary), #8e0000); color: white; border: none; border-radius: 50px; cursor: pointer; margin: 30px; display: none; font-weight: bold; z-index: 500; box-shadow: 0 0 20px var(--primary); }
-        #leaderboard { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 420px; background: white; color: #111; border-radius: 20px; padding: 25px; z-index: 1000; display: none; border: 5px solid var(--gold); box-shadow: 0 0 30px rgba(0,0,0,0.5); }
-        .prize-text { color: var(--primary); font-weight: bold; font-size: 14px; }
+        #leaderboard { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 400px; background: white; color: #111; border-radius: 20px; padding: 25px; z-index: 1000; display: none; border: 5px solid var(--gold); }
     </style>
 </head>
 <body>
@@ -82,29 +81,25 @@
 <script>
     // --- 1. Firebase 配置 ---
     const firebaseConfig = {
-      apiKey: "AIzaSyBHJtwI42b8i6z7zRw6tDgtR4ITSNKWrf8",
-      authDomain: "aiot-d53dc.firebaseapp.com",
-      databaseURL: "https://aiot-d53dc-default-rtdb.firebaseio.com",
-      projectId: "aiot-d53dc",
-      storageBucket: "aiot-d53dc.firebasestorage.app",
-      messagingSenderId: "1021331253049",
-      appId: "1:1021331253049:web:11f0695e8ab64eae0baae8",
-      measurementId: "G-9YDKS70ZE7"
+        apiKey: "YOUR_API_KEY",
+        databaseURL: "https://aiot-d53dc-default-rtdb.firebaseio.com",
+        projectId: "aiot-d53dc",
+        appId: "..."
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
     const horseLibrary = [
-        { id: 0, trait: "薪水小偷", stats: {spd: 60, sta: 95, burst: 40, lck: 70}, desc: "擅長在主管視線外緩步前進，體力條深不可測。"},
-        { id: 1, trait: "下班戰神", stats: {spd: 50, sta: 65, burst: 95, lck: 60}, desc: "平時節能模式，一旦夕陽西下便開啟超頻模式。"},
-        { id: 2, trait: "爆肝王", stats: {spd: 95, sta: 25, burst: 80, lck: 30}, desc: "起步瞬間即巔峰，但需注意健康警訊。"},
-        { id: 3, trait: "會議發言機", stats: {spd: 75, sta: 60, burst: 60, lck: 80}, desc: "節奏感極強，能以穩定的語速壓制全場。"},
-        { id: 4, trait: "咖啡中毒者", stats: {spd: 80, sta: 45, burst: 75, lck: 50}, desc: "依賴興奮劑，速度取決於早上的拿鐵濃度。"},
-        { id: 5, trait: "甩鍋專業戶", stats: {spd: 45, sta: 85, burst: 30, lck: 99}, desc: "擁有神級閃避，任何障礙與責任都碰不到牠。"},
-        { id: 6, trait: "加班邊緣人", stats: {spd: 55, sta: 90, burst: 50, lck: 60}, desc: "沒人注意到牠已悄悄跑到最前面。"},
-        { id: 7, trait: "截稿衝刺", stats: {spd: 35, sta: 70, burst: 99, lck: 40}, desc: "在最後一秒前，你永遠不知道牠會爆發什麼。"},
-        { id: 8, trait: "出一張嘴", stats: {spd: 85, sta: 50, burst: 70, lck: 60}, desc: "用氣勢驅動四肢，速度快到讓人無法反駁。"},
-        { id: 9, trait: "中庸之道", stats: {spd: 70, sta: 75, burst: 65, lck: 70}, desc: "不求最快，但絕對活得比任何馬都久。"}
+        { id: 0, trait: "薪水小偷", stats: {spd: 60, sta: 95, burst: 40}, desc: "摸魚節省體力，穩定性最高。"},
+        { id: 1, trait: "下班戰神", stats: {spd: 50, sta: 65, burst: 95}, desc: "看到終點線會瘋狂加速。"},
+        { id: 2, trait: "爆肝王", stats: {spd: 95, sta: 25, burst: 80}, desc: "起步超快，但體力消耗極速。"},
+        { id: 3, trait: "會議發言機", stats: {spd: 75, sta: 60, burst: 60}, desc: "各項數值平均。"},
+        { id: 4, trait: "咖啡中毒者", stats: {spd: 80, sta: 45, burst: 75}, desc: "依賴咖啡因，體力波動大。"},
+        { id: 5, trait: "甩鍋專業戶", stats: {spd: 45, sta: 85, burst: 30}, desc: "完全免疫滑倒事件。"},
+        { id: 6, trait: "加班邊緣人", stats: {spd: 55, sta: 90, burst: 50}, desc: "存在感低但耐力十足。"},
+        { id: 7, trait: "截稿衝刺", stats: {spd: 35, sta: 70, burst: 99}, desc: "雖然慢但極易觸發神級衝刺。"},
+        { id: 8, trait: "出一張嘴", stats: {spd: 85, sta: 50, burst: 70}, desc: "高效率代表，給身邊人壓力。"},
+        { id: 9, trait: "中庸之道", stats: {spd: 70, sta: 75, burst: 65}, desc: "體力分配非常科學。"}
     ];
 
     let names = ["JULIA", "MOLLY", "DON", "豪哥", "Gimme", "Erick", "韋志", "JULI", "JASON", "KRIS"];
@@ -117,6 +112,7 @@
     let finishedHorses = [];
 
     function init() {
+        // 管理員立即看到開賽按鈕，方便測試
         if (isAdmin) document.getElementById('start-btn').style.display = 'block';
         
         const nameGrid = document.getElementById('name-grid');
@@ -139,10 +135,7 @@
                 <div style="font-size:28px; transform: scaleX(-1);">🐎</div>
                 <b style="color:var(--gold); font-size:16px;">${h.trait}</b>
                 <div class="stat-group">
-                    <div class="stat-row"><span class="stat-label">速度</span><div class="stat-bar"><div class="stat-fill" style="width:${h.stats.spd}%"></div></div></div>
-                    <div class="stat-row"><span class="stat-label">體力</span><div class="stat-bar"><div class="stat-fill" style="width:${h.stats.sta}%"></div></div></div>
-                    <div class="stat-row"><span class="stat-label">爆發</span><div class="stat-bar"><div class="stat-fill" style="width:${h.stats.burst}%"></div></div></div>
-                    <div class="stat-row"><span class="stat-label">幸運</span><div class="stat-bar"><div class="stat-fill" style="width:${h.stats.lck}%"></div></div></div>
+                    <div class="stat-row"><span class="stat-label">效率</span><div class="stat-bar"><div class="stat-fill" style="width:${h.stats.spd}%"></div></div></div>
                 </div>
                 <div class="horse-desc">${h.desc}</div>
             `;
@@ -214,12 +207,12 @@
     }
 
     function resetData() {
-        if(!confirm("確定重置數據嗎？")) return;
         db.ref().set(null);
         localStorage.clear();
         location.reload();
     }
 
+    // --- 賽馬核心引擎 ---
     document.getElementById('start-btn').onclick = function() {
         db.ref('assignments').once('value', (snap) => {
             const participants = snap.val() || {};
@@ -246,6 +239,7 @@
             return { name: name, horseData: horseLibrary[horseIdx], color: colors[idx % colors.length] };
         });
 
+        // 調整賽道高度，讓畫面更好看
         const laneHeight = finalParticipants.length > 0 ? (100 / finalParticipants.length) : 100;
 
         finalParticipants.forEach((item, idx) => {
@@ -320,9 +314,7 @@
                     h.nextCooldown = 4000 + (syncRandom() * 4000);
                     const roll = syncRandom();
 
-                    // 使用幸運值來降低滑倒機率
-                    let tripChance = 0.12 * (1 - (h.stats.lck / 200));
-                    if (roll < tripChance && h.id !== 5) { 
+                    if (roll < 0.12 && h.id !== 5) { 
                         h.speed = 0; h.pos = Math.max(10, h.pos - 40);
                         updateBubble(h.id, "⛸️ 滑倒了！", "#546e7a");
                         setTimeout(() => updateBubble(h.id, "", "", false), 1500);
@@ -372,35 +364,10 @@
         document.getElementById('leaderboard').style.display = 'block';
         const list = document.getElementById('leaderboard-list');
         list.innerHTML = "";
-        
         finishedHorses.forEach((h, i) => {
-            const rank = i + 1;
             const item = document.createElement('div');
-            item.style.cssText = "padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; font-weight:bold; align-items:center;";
-            
-            let prizeInfo = "";
-            let medal = `#${rank}`;
-
-            // 獎金邏輯判斷
-            if (rank === 1) {
-                medal = "🥇 第一名";
-                prizeInfo = "$2500";
-            } else if (rank >= 2 && rank <= 5) {
-                medal = `🥈 第${rank}名`;
-                prizeInfo = "新光禮券 $1000";
-            } else {
-                const prizes = {6: "$500", 7: "$400", 8: "$300", 9: "$200", 10: "$100"};
-                medal = `🥉 第${rank}名`;
-                prizeInfo = prizes[rank] || "-";
-            }
-
-            item.innerHTML = `
-                <div>
-                    <span style="color:var(--primary)">${medal}</span> 
-                    <span style="margin-left:8px;">${h.ownerName}</span>
-                </div>
-                <div class="prize-text">${prizeInfo}</div>
-            `;
+            item.style.cssText = "padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; font-weight:bold;";
+            item.innerHTML = `<span><span style="color:var(--primary)">#${i+1}</span> ${h.ownerName}</span> <span style="color:#666; font-size:12px;">${h.trait}</span>`;
             list.appendChild(item);
         });
     }
