@@ -8,140 +8,104 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
         :root { 
-            --primary: #d32f2f; --gold: #ffd700; --track-bg: #2c3e50; 
+            --primary: #d32f2f; --gold: #ffd700; --track-bg: #1a1a1a; 
             --success: #4caf50; --warning: #ffeb3b; --danger: #ff5252; 
-            --recover: #00bcd4; --sprint: #ff5722; 
         }
 
         body { 
-            font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; 
-            background: #121212; color: white; margin: 0; padding: 0; 
-            height: 100vh; display: flex; flex-direction: column; 
-            overflow: hidden; touch-action: manipulation;
+            font-family: 'PingFang TC', sans-serif; background: #000; color: white; 
+            margin: 0; padding: 0; height: 100vh; overflow: hidden;
         }
 
-        /* 管理員面板 */
-        #admin-panel {
-            position: fixed; bottom: 20px; right: 20px; z-index: 9999;
-            display: none; flex-direction: column; gap: 10px;
+        /* 頂部狀態欄 */
+        .user-status-bar {
+            background: rgba(255,255,255,0.1); padding: 10px 15px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #333; font-size: 14px;
         }
-        .admin-btn {
-            padding: 12px 20px; border-radius: 30px; border: none; font-weight: bold; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
+        .logout-btn { background: none; border: 1px solid #666; color: #ccc; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
 
-        /* 選人畫面優化 */
+        /* 選人畫面 */
         #user-login { 
-            background: rgba(30, 30, 30, 0.95); padding: 20px; border-radius: 20px; 
-            text-align: center; z-index: 200; position: fixed; top: 50%; left: 50%;
-            transform: translate(-50%, -50%); width: 85%; max-width: 400px; 
-            border: 2px solid var(--gold); box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            position: fixed; inset: 0; background: #121212; z-index: 1000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
-        .name-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 15px; }
-        .name-btn { 
-            padding: 15px 10px; background: #333; border: 1px solid #555; 
-            color: white; border-radius: 12px; font-size: 16px; font-weight: bold;
-        }
-        .name-btn.taken { opacity: 0.3; pointer-events: none; }
-        .name-btn.me { background: var(--success); border-color: white; box-shadow: 0 0 10px var(--success); }
+        .name-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 90%; max-width: 400px; }
+        .name-btn { padding: 15px; background: #222; border: 1px solid #444; color: white; border-radius: 10px; font-weight: bold; }
+        .name-btn.taken { opacity: 0.3; pointer-events: none; text-decoration: line-through; }
 
-        /* 選馬畫面優化 (手機捲動) */
-        .setup-area { 
-            flex-grow: 1; padding: 15px; width: 100%; box-sizing: border-box;
-            overflow-y: auto; display: none; -webkit-overflow-scrolling: touch;
-        }
-        .horse-select-grid { display: grid; grid-template-columns: 1fr; gap: 15px; padding-bottom: 80px; }
+        /* 選馬畫面視覺化 */
+        #setup { display: none; height: calc(100vh - 50px); overflow-y: auto; padding: 15px; box-sizing: border-box; }
         .horse-slot { 
-            background: linear-gradient(145deg, #252525, #1a1a1a); padding: 15px; 
-            border-radius: 15px; border: 2px solid #333; position: relative; 
+            background: #222; border-radius: 12px; padding: 15px; margin-bottom: 15px;
+            border: 2px solid #333; position: relative;
         }
-        .horse-slot.my-pick { border-color: var(--success); background: rgba(76, 175, 80, 0.1); }
-        .horse-slot.occupied { opacity: 0.4; filter: grayscale(0.8); }
+        .horse-slot.my-pick { border-color: var(--success); background: #1a2e1a; }
+        .horse-slot.occupied { opacity: 0.5; filter: grayscale(1); }
 
-        /* 賽道區優化 */
-        .track-container { 
-            position: relative; width: 100vw; flex-grow: 1; 
-            background: var(--track-bg); display: none; overflow: hidden;
-        }
-        .lane { 
-            position: relative; width: 100%; border-bottom: 1px solid rgba(255,255,255,0.1);
-            display: flex; align-items: center; box-sizing: border-box;
-        }
-        .finish-line { 
-            position: absolute; right: 60px; top: 0; bottom: 0; width: 20px; 
-            background: repeating-linear-gradient(0deg, #fff, #fff 10px, #000 10px, #000 20px); 
-            border-left: 2px solid var(--gold); z-index: 1; 
-        }
+        /* 視覺化能力值條 */
+        .stat-viz { margin-top: 10px; }
+        .stat-line { display: flex; align-items: center; margin-bottom: 4px; font-size: 12px; }
+        .stat-label { width: 40px; color: #aaa; }
+        .stat-bar-bg { flex-grow: 1; height: 6px; background: #000; border-radius: 3px; overflow: hidden; }
+        .stat-bar-fill { height: 100%; background: linear-gradient(90deg, #555, var(--gold)); border-radius: 3px; }
 
-        .horse-container { 
-            position: absolute; left: 0; display: flex; align-items: center; 
-            width: 100px; z-index: 10; will-change: left;
-        }
-        .horse-icon { font-size: 28px; transform: scaleX(-1); }
-        .horse-label { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60px; }
-        
-        /* 狀態氣泡同步感 */
-        .status-bubble { 
-            position: absolute; top: -30px; left: 0; font-size: 10px; padding: 2px 8px; 
-            border-radius: 10px; display: none; white-space: nowrap; z-index: 100;
-        }
+        /* 賽道 */
+        #track { display: none; height: 100vh; width: 100vw; background: #111; position: relative; }
+        .lane { position: relative; border-bottom: 1px solid #222; display: flex; align-items: center; width: 100%; }
+        .horse-container { position: absolute; left: 0; display: flex; align-items: center; width: 120px; will-change: left; }
+        .horse-icon { font-size: 30px; transform: scaleX(-1); }
+        .finish-line { position: absolute; right: 50px; top: 0; bottom: 0; width: 10px; background: repeating-linear-gradient(0deg, #fff, #fff 10px, #000 10px, #000 20px); }
 
-        /* 結算畫面 */
-        #leaderboard { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.9); z-index: 2000; display: none;
-            flex-direction: column; align-items: center; justify-content: center;
-        }
-        .leaderboard-content {
-            width: 85%; background: white; color: black; border-radius: 20px;
-            padding: 20px; max-height: 80vh; overflow-y: auto;
-        }
+        /* 管理者工具 */
+        .admin-controls { position: fixed; bottom: 20px; left: 0; right: 0; display: flex; justify-content: center; gap: 10px; z-index: 2000; }
+        .admin-btn { padding: 12px 25px; border-radius: 25px; border: none; font-weight: bold; color: white; }
 
-        /* 其他元件 */
-        #start-btn { 
-            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-            padding: 15px 40px; font-size: 20px; background: var(--primary); 
-            color: white; border: none; border-radius: 50px; display: none; z-index: 500;
-        }
+        /* 結算 */
+        #leaderboard { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 3000; display: none; align-items: center; justify-content: center; }
+        .prize-box { background: white; color: black; width: 85%; border-radius: 15px; padding: 20px; max-height: 80vh; overflow-y: auto; }
     </style>
 </head>
 <body>
 
-    <audio id="bg-music" loop src="https://actions.google.com/sounds/v1/sports/crowd_cheer.ogg"></audio>
-    <audio id="race-music" loop src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3"></audio>
+<audio id="bgm" loop src="https://actions.google.com/sounds/v1/sports/crowd_cheer.ogg"></audio>
+<audio id="race-bgm" loop src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"></audio>
 
-    <h2 id="main-title" style="margin: 10px; text-align: center; color: var(--gold); font-size: 18px;">💼 2026 AIOT 尾牙賽馬 - 馬年行大運</h2>
+<div class="user-status-bar" id="status-bar" style="display:none;">
+    <span>目前角色: <b id="display-name" style="color:var(--gold)"></b></span>
+    <button class="logout-btn" onclick="logout()">重選人物</button>
+</div>
 
-    <div id="user-login">
-        <h2 style="color: var(--gold); margin: 0 0 10px 0;">你是誰？</h2>
-        <div class="name-grid" id="name-grid"></div>
+<div id="user-login">
+    <h2 style="color:var(--gold)">💼 2026 AIOT 尾牙賽馬</h2>
+    <p>請選擇您的身份</p>
+    <div class="name-grid" id="name-grid"></div>
+</div>
+
+<div id="setup">
+    <h3 style="text-align:center">請挑選你的戰馬</h3>
+    <div id="select-grid"></div>
+</div>
+
+<div id="track">
+    <div class="finish-line"></div>
+    <div id="lanes-box" style="height:100%"></div>
+</div>
+
+<div id="admin-panel" class="admin-controls" style="display:none;">
+    <button class="admin-btn" style="background:var(--success)" onclick="startRace()">🏁 開始遊戲</button>
+    <button class="admin-btn" style="background:var(--primary)" onclick="resetGame()">🔄 重置全場</button>
+</div>
+
+<div id="leaderboard">
+    <div class="prize-box">
+        <h2 style="text-align:center;color:var(--primary)">🏆 最終名次 🏆</h2>
+        <div id="leaderboard-list"></div>
+        <button onclick="location.reload()" style="width:100%; padding:12px; margin-top:15px; border-radius:8px;">關閉</button>
     </div>
-
-    <div id="setup" class="setup-area">
-        <h3 id="picker-title" style="text-align: center; color: #fff;">請挑選你的戰馬</h3>
-        <div class="horse-select-grid" id="select-grid"></div>
-    </div>
-
-    <div class="track-container" id="track">
-        <div class="finish-line"></div>
-        <div id="lanes-box" style="height: 100%; position: relative;"></div>
-    </div>
-
-    <div id="admin-panel">
-        <button id="start-btn-admin" class="admin-btn" style="background: var(--success); color: white;">🏁 強制開賽！</button>
-        <button onclick="resetData()" class="admin-btn" style="background: var(--danger); color: white;">🔄 重置全場</button>
-    </div>
-
-    <div id="leaderboard">
-        <div class="leaderboard-content">
-            <h2 style="text-align:center; color: var(--primary); margin: 0 0 15px 0;">🏆 FINAL RANK 🏆</h2>
-            <div id="leaderboard-list"></div>
-            <button onclick="location.reload()" style="width:100%; padding:15px; margin-top:20px; background: #333; color: white; border-radius: 10px;">關閉視窗</button>
-        </div>
-    </div>
+</div>
 
 <script>
-    // --- Firebase 配置 (使用你的配置) ---
     const firebaseConfig = {
       apiKey: "AIzaSyBHJtwI42b8i6z7zRw6tDgtR4ITSNKWrf8",
       authDomain: "aiot-d53dc.firebaseapp.com",
@@ -169,102 +133,76 @@
     ];
 
     let names = ["JULIA", "MOLLY", "DON", "豪哥", "Gimme", "Erick", "韋志", "JULI", "JASON", "KRIS"];
-    const colors = ["#FF5252", "#FFD700", "#E040FB", "#00E676", "#2979FF", "#FF9100", "#40C4FF", "#FF1744", "#F4FF81", "#B2FF59"];
+    let myName = localStorage.getItem('race_user') || "";
+    const isAdmin = new URLSearchParams(window.location.search).get('admin') === '1';
+    let serverTimeOffset = 0;
 
-    let myName = localStorage.getItem('my_race_name') || "";
-    const urlParams = new URLSearchParams(window.location.search);
-    const isAdmin = urlParams.get('admin') === '1';
-    let raceStarted = false;
-    let serverStartTime = 0;
+    // 校正伺服器時間
+    db.ref(".info/serverTimeOffset").on("value", (snap) => {
+        serverTimeOffset = snap.val();
+    });
 
     function init() {
         if (isAdmin) document.getElementById('admin-panel').style.display = 'flex';
-        
-        // 生成名字按鈕
-        const nameGrid = document.getElementById('name-grid');
+        renderLogin();
+        renderSelection();
+        listenFirebase();
+    }
+
+    function renderLogin() {
+        const grid = document.getElementById('name-grid');
+        grid.innerHTML = "";
         names.forEach(n => {
             const btn = document.createElement('button');
             btn.className = 'name-btn';
-            btn.id = `name-${n}`;
+            btn.id = `login-${n}`;
             btn.innerText = n;
             btn.onclick = () => login(n);
-            nameGrid.appendChild(btn);
+            grid.appendChild(btn);
         });
+    }
 
-        // 生成馬匹卡片
-        const horseGrid = document.getElementById('select-grid');
+    function renderSelection() {
+        const grid = document.getElementById('select-grid');
+        grid.innerHTML = "";
         horseLibrary.forEach((h, i) => {
             const div = document.createElement('div');
             div.className = 'horse-slot';
             div.id = `slot-${i}`;
             div.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                    <b style="color:var(--gold); font-size:18px;">${h.trait}</b>
-                    <span style="font-size:10px; background:var(--primary); padding:2px 5px; border-radius:4px;">STAFF-${i+1}</span>
+                <div style="display:flex; justify-content:space-between">
+                    <b>${h.trait}</b> <span style="font-size:10px; color:#666">STAFF-${i+1}</span>
                 </div>
-                <div style="font-size:32px; margin:10px 0; transform: scaleX(-1);">🐎</div>
-                <div style="font-size:11px; color:#aaa; margin-bottom:10px;">${h.desc}</div>
-                <div class="stat-group">
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; font-size:10px;">
-                        <div>速度: ${h.stats.spd}</div><div>體力: ${h.stats.sta}</div>
-                        <div>爆發: ${h.stats.burst}</div><div>幸運: ${h.stats.lck}</div>
-                    </div>
+                <div class="stat-viz">
+                    ${Object.entries(h.stats).map(([k, v]) => `
+                        <div class="stat-line">
+                            <span class="stat-label">${translateStat(k)}</span>
+                            <div class="stat-bar-bg"><div class="stat-bar-fill" style="width:${v}%"></div></div>
+                        </div>
+                    `).join('')}
                 </div>
+                <p style="font-size:11px; color:#888; margin-top:8px;">${h.desc}</p>
             `;
             div.onclick = () => selectHorse(i);
-            horseGrid.appendChild(div);
-        });
-
-        listenFirebase();
-    }
-
-    function listenFirebase() {
-        db.ref('users').on('value', snap => {
-            const users = snap.val() || {};
-            names.forEach(n => {
-                const btn = document.getElementById(`name-${n}`);
-                if (users[n]) {
-                    btn.classList.add('taken');
-                    if (n === myName) {
-                        btn.classList.add('me');
-                        document.getElementById('user-login').style.display = 'none';
-                        document.getElementById('setup').style.display = 'block';
-                        document.getElementById('bg-music').play().catch(()=>{});
-                    }
-                } else {
-                    btn.classList.remove('taken', 'me');
-                }
-            });
-        });
-
-        db.ref('assignments').on('value', snap => {
-            const assignments = snap.val() || {};
-            horseLibrary.forEach((_, i) => {
-                const slot = document.getElementById(`slot-${i}`);
-                const owner = Object.keys(assignments).find(name => assignments[name] === i);
-                slot.className = 'horse-slot';
-                if (owner) {
-                    if (owner === myName) slot.classList.add('my-pick');
-                    else slot.classList.add('occupied');
-                }
-            });
-        });
-
-        db.ref('gameState').on('value', snap => {
-            const state = snap.val();
-            if (state && state.status === 'racing' && !raceStarted) {
-                serverStartTime = state.startTime;
-                startTheGame(state.seed, state.participants);
-            } else if (!state || state.status === 'idle') {
-                if(raceStarted) location.reload(); 
-            }
+            grid.appendChild(div);
         });
     }
+
+    function translateStat(s) { const m = {spd:'速度', sta:'體力', burst:'爆發', lck:'幸運'}; return m[s]; }
 
     function login(n) {
         myName = n;
-        localStorage.setItem('my_race_name', n);
+        localStorage.setItem('race_user', n);
         db.ref(`users/${n}`).set(true);
+        document.getElementById('bgm').play().catch(()=>{});
+    }
+
+    function logout() {
+        if (myName) db.ref(`users/${myName}`).remove();
+        if (myName) db.ref(`assignments/${myName}`).remove();
+        myName = "";
+        localStorage.removeItem('race_user');
+        location.reload();
     }
 
     function selectHorse(idx) {
@@ -272,163 +210,157 @@
         db.ref(`assignments/${myName}`).set(idx);
     }
 
-    function resetData() {
-        if(!confirm("確定重置所有數據嗎？所有人將重新登入！")) return;
-        db.ref().set({ gameState: { status: 'idle' } });
-    }
+    function listenFirebase() {
+        // 同步登入狀態
+        db.ref('users').on('value', snap => {
+            const val = snap.val() || {};
+            names.forEach(n => {
+                const btn = document.getElementById(`login-${n}`);
+                if (val[n]) btn.classList.add('taken');
+                else btn.classList.remove('taken');
+            });
+            if (myName && val[myName]) {
+                document.getElementById('user-login').style.display = 'none';
+                document.getElementById('status-bar').style.display = 'flex';
+                document.getElementById('setup').style.display = 'block';
+                document.getElementById('display-name').innerText = myName;
+            }
+        });
 
-    document.getElementById('start-btn-admin').onclick = function() {
-        db.ref('assignments').once('value', snap => {
-            const participants = snap.val() || {};
-            if (Object.keys(participants).length === 0) return alert("還沒人選馬！");
-            db.ref('gameState').set({
-                status: 'racing',
-                seed: Math.random(),
-                startTime: Date.now() + 2000, // 2秒後準時開賽
-                participants: participants
+        // 同步馬匹選擇
+        db.ref('assignments').on('value', snap => {
+            const val = snap.val() || {};
+            horseLibrary.forEach((_, i) => {
+                const slot = document.getElementById(`slot-${i}`);
+                const owner = Object.keys(val).find(k => val[k] === i);
+                slot.className = 'horse-slot';
+                if (owner === myName) slot.classList.add('my-pick');
+                else if (owner) slot.classList.add('occupied');
             });
         });
-    };
 
-    function startTheGame(seed, participants) {
-        raceStarted = true;
-        document.getElementById('setup').style.display = 'none';
-        document.getElementById('user-login').style.display = 'none';
-        document.getElementById('track').style.display = 'block';
-        document.getElementById('bg-music').pause();
-        document.getElementById('race-music').play().catch(()=>{});
-
-        const lanesBox = document.getElementById('lanes-box');
-        lanesBox.innerHTML = "";
-        
-        const finalParticipants = Object.keys(participants).map((name, idx) => ({
-            name, horseData: horseLibrary[participants[name]], color: colors[idx % colors.length]
-        }));
-
-        const laneHeight = 100 / Math.max(finalParticipants.length, 5);
-        finalParticipants.forEach((item, idx) => {
-            const lane = document.createElement('div');
-            lane.className = 'lane';
-            lane.style.height = `${laneHeight}%`;
-            lane.innerHTML = `
-                <div class="horse-container" id="horse-container-${idx}">
-                    <div class="status-bubble" id="status-${idx}"></div>
-                    <div class="horse-icon" style="color:${item.color}">🐎</div>
-                    <div style="display:flex; flex-direction:column;">
-                        <span class="horse-label">${item.name}</span>
-                        <div style="width:40px; height:4px; background:#000; border-radius:2px;">
-                            <div id="stamina-${idx}" style="width:100%; height:100%; background:var(--success); transition:0.3s;"></div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            lanesBox.appendChild(lane);
+        // 監聽比賽開始
+        db.ref('gameState').on('value', snap => {
+            const state = snap.val();
+            if (state && state.status === 'racing') {
+                runRace(state);
+            } else if (state && state.status === 'idle' && document.getElementById('track').style.display === 'block') {
+                location.reload();
+            }
         });
-
-        runSynchronizedEngine(seed, finalParticipants);
     }
 
-    // --- 同步核心引擎 ---
-    function runSynchronizedEngine(seed, list) {
-        const trackWidth = document.getElementById('track').offsetWidth;
-        const finishLineX = trackWidth - 110;
+    // 管理者：生成劇本
+    function startRace() {
+        db.ref('assignments').once('value', snap => {
+            const players = snap.val();
+            if (!players) return alert("沒人選馬！");
+            
+            const raceData = {};
+            Object.entries(players).forEach(([name, horseIdx]) => {
+                const stats = horseLibrary[horseIdx].stats;
+                // 決定總奔跑時間 (25~35秒間)
+                const baseTime = 30 - (stats.spd / 10) + (Math.random() * 5);
+                raceData[name] = {
+                    horseIdx,
+                    totalTime: baseTime,
+                    shake: 2 + Math.random() * 3 // 跑步抖動感
+                };
+            });
 
-        const horses = list.map(item => ({
-            ...item, 
-            pos: 10, 
-            finished: false,
-            rank: 0
-        }));
+            db.ref('gameState').set({
+                status: 'racing',
+                startTime: Date.now() + serverTimeOffset + 3000, // 3秒後倒數開始
+                raceData: raceData
+            });
+        });
+    }
 
-        let finishedCount = 0;
+    function resetGame() {
+        if (confirm("確定重置？")) db.ref().set({ gameState: { status: 'idle' } });
+    }
 
-        function update() {
-            const now = Date.now();
-            const elapsed = (now - serverStartTime) / 1000; // 秒
+    // 核心：劇本播放引擎
+    function runRace(state) {
+        document.getElementById('setup').style.display = 'none';
+        document.getElementById('status-bar').style.display = 'none';
+        document.getElementById('track').style.display = 'block';
+        document.getElementById('bgm').pause();
+        document.getElementById('race-bgm').play().catch(()=>{});
+
+        const box = document.getElementById('lanes-box');
+        box.innerHTML = "";
+        const participants = Object.entries(state.raceData);
+        const laneH = 100 / participants.length;
+
+        participants.forEach(([name, data], idx) => {
+            const div = document.createElement('div');
+            div.className = 'lane';
+            div.style.height = `${laneH}%`;
+            div.innerHTML = `
+                <div class="horse-container" id="horse-${idx}">
+                    <div class="horse-icon">🐎</div>
+                    <div style="font-size:12px;">${name}</div>
+                </div>
+            `;
+            box.appendChild(div);
+        });
+
+        const finishX = document.getElementById('track').offsetWidth - 120;
+
+        function frame() {
+            const now = Date.now() + serverTimeOffset;
+            const elapsed = (now - state.startTime) / 1000;
 
             if (elapsed < 0) {
-                requestAnimationFrame(update);
+                requestAnimationFrame(frame);
                 return;
             }
 
             let allFinished = true;
-            horses.forEach((h, i) => {
-                if (h.finished) return;
-                allFinished = false;
+            const results = [];
 
-                // 使用 Seed + 索引 + 時間 進行完全確定的隨機運算
-                const deterministicSeed = Math.sin(seed + i) * 10000;
-                const pseudoRandom = (t) => (Math.abs(Math.sin(deterministicSeed + t)) * 100) % 1;
-
-                // 基礎速度與體力消耗 (與時間掛鉤)
-                let speed = (h.horseData.stats.spd * 0.5) + (pseudoRandom(Math.floor(elapsed)) * 15);
+            participants.forEach(([name, data], idx) => {
+                const el = document.getElementById(`horse-${idx}`);
+                // 根據進度百分比計算位置： (已過時間 / 總時間)
+                let progress = Math.min(1, elapsed / data.totalTime);
+                let currentX = progress * finishX;
                 
-                // 模擬事件同步
-                const eventTick = Math.floor(elapsed / 3);
-                const eventRoll = pseudoRandom(eventTick);
-                const bubble = document.getElementById(`status-${i}`);
+                // 加入一點點物理震動感
+                let sway = progress < 1 ? Math.sin(elapsed * 15) * data.shake : 0;
+                el.style.left = currentX + "px";
+                el.style.top = (sway + 10) + "px";
 
-                if (eventRoll > 0.9) {
-                    speed *= 1.5;
-                    bubble.innerText = "⚡ 衝刺！";
-                    bubble.style.display = "block";
-                    bubble.style.background = "var(--sprint)";
-                } else if (eventRoll < 0.1) {
-                    speed *= 0.3;
-                    bubble.innerText = "⛸️ 滑倒！";
-                    bubble.style.display = "block";
-                    bubble.style.background = "var(--danger)";
-                } else {
-                    bubble.style.display = "none";
-                }
-
-                // 計算當前位置
-                h.pos = 10 + (elapsed * speed);
-                
-                const el = document.getElementById(`horse-container-${i}`);
-                el.style.left = Math.min(h.pos, finishLineX + 50) + "px";
-
-                // 抖動效果
-                el.style.transform = `translateY(${Math.sin(elapsed * 10) * 2}px)`;
-
-                if (h.pos >= finishLineX) {
-                    h.finished = true;
-                    h.rank = ++finishedCount;
-                    h.finishTime = elapsed;
-                }
+                if (progress < 1) allFinished = false;
+                results.push({ name, time: data.totalTime });
             });
 
-            if (finishedCount < horses.length) {
-                requestAnimationFrame(update);
+            if (!allFinished) {
+                requestAnimationFrame(frame);
             } else {
-                setTimeout(() => showLeaderboard(horses), 1000);
+                setTimeout(() => showFinal(results), 1000);
             }
         }
-
-        requestAnimationFrame(update);
+        requestAnimationFrame(frame);
     }
 
-    function showLeaderboard(results) {
+    function showFinal(results) {
+        const sorted = results.sort((a,b) => a.time - b.time);
         document.getElementById('leaderboard').style.display = 'flex';
         const list = document.getElementById('leaderboard-list');
-        list.innerHTML = "";
-        
-        const sorted = results.sort((a, b) => a.rank - b.rank);
-        sorted.forEach(h => {
-            const div = document.createElement('div');
-            div.style.cssText = "padding:12px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; font-weight:bold;";
-            
-            let prize = "-";
-            if (h.rank === 1) prize = "🥇 $2500";
-            else if (h.rank <= 5) prize = `🥈 $1000禮券`;
-            else prize = `🥉 參加獎`;
+        list.innerHTML = sorted.map((r, i) => `
+            <div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #eee; font-weight:bold">
+                <span>#${i+1} ${r.name}</span>
+                <span style="color:var(--primary)">${getPrize(i+1)}</span>
+            </div>
+        `).join('');
+    }
 
-            div.innerHTML = `
-                <span>#${h.rank} ${h.name}</span>
-                <span style="color:var(--primary)">${prize}</span>
-            `;
-            list.appendChild(div);
-        });
+    function getPrize(rank) {
+        if (rank === 1) return "$2500";
+        if (rank <= 5) return "$1000禮券";
+        const others = {6:"$500", 7:"$400", 8:"$300", 9:"$200", 10:"$100"};
+        return others[rank] || "$0";
     }
 
     init();
