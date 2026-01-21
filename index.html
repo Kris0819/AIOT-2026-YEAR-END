@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 AIOT 尾牙賽馬 - 獎金頒獎優化版</title>
+    <title>2026 AIOT 尾牙賽馬 - 同步優化最終版</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
         :root { 
             --primary: #d32f2f; --gold: #ffd700; --track-bg: #1a1a1a; 
             --success: #4caf50; --warning: #ffeb3b; --danger: #ff5252; 
+            --recover: #00bcd4; --sprint: #ff5722;
         }
 
         body { 
@@ -17,73 +18,75 @@
             margin: 0; padding: 0; height: 100vh; overflow: hidden;
         }
 
-        /* 頂部狀態欄 */
-        .user-status-bar {
-            background: rgba(255,255,255,0.1); padding: 10px 15px;
-            display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 1px solid #333; font-size: 14px;
+        /* 身份顯示與重選 */
+        .header-bar {
+            background: #222; padding: 10px 15px; display: flex; 
+            justify-content: space-between; align-items: center; border-bottom: 2px solid #333;
         }
-        .logout-btn { background: none; border: 1px solid #666; color: #ccc; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+        .user-tag { color: var(--gold); font-weight: bold; font-size: 14px; }
+        .back-btn { background: #444; color: #fff; border: none; padding: 5px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; }
 
         /* 選人畫面 */
-        #user-login { 
-            position: fixed; inset: 0; background: #121212; z-index: 1000;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-        }
-        .name-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 90%; max-width: 400px; }
-        .name-btn { padding: 15px; background: #222; border: 1px solid #444; color: white; border-radius: 10px; font-weight: bold; }
-        .name-btn.taken { opacity: 0.3; pointer-events: none; text-decoration: line-through; }
+        #user-login { position: fixed; inset: 0; background: #121212; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .name-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; width: 85%; max-width: 400px; }
+        .name-btn { padding: 18px; background: #2a2a2a; border: 1px solid #444; color: white; border-radius: 12px; font-weight: bold; font-size: 16px; }
+        .name-btn.taken { opacity: 0.2; pointer-events: none; }
 
-        /* 選馬畫面視覺化 */
-        #setup { display: none; height: calc(100vh - 50px); overflow-y: auto; padding: 15px; box-sizing: border-box; }
-        .horse-slot { 
-            background: #222; border-radius: 12px; padding: 15px; margin-bottom: 15px;
-            border: 2px solid #333; position: relative;
-        }
-        .horse-slot.my-pick { border-color: var(--success); background: #1a2e1a; }
-        .horse-slot.occupied { opacity: 0.5; filter: grayscale(1); }
+        /* 選馬視覺化進度條 */
+        #setup { display: none; height: calc(100vh - 60px); overflow-y: auto; padding: 15px; box-sizing: border-box; }
+        .horse-slot { background: #222; border-radius: 15px; padding: 15px; margin-bottom: 15px; border: 2px solid #333; transition: 0.3s; }
+        .horse-slot.my-pick { border-color: var(--success); background: #1a2e1a; box-shadow: 0 0 15px rgba(76, 175, 80, 0.2); }
+        .horse-slot.occupied { opacity: 0.4; filter: grayscale(1); }
+        .stat-bar-group { margin: 10px 0; }
+        .stat-row { display: flex; align-items: center; margin-bottom: 5px; font-size: 11px; }
+        .stat-label { width: 35px; color: #888; }
+        .stat-outer { flex-grow: 1; height: 6px; background: #000; border-radius: 3px; overflow: hidden; }
+        .stat-inner { height: 100%; background: linear-gradient(90deg, #444, var(--gold)); }
 
-        /* 視覺化能力值條 */
-        .stat-viz { margin-top: 10px; }
-        .stat-line { display: flex; align-items: center; margin-bottom: 4px; font-size: 12px; }
-        .stat-label { width: 40px; color: #aaa; }
-        .stat-bar-bg { flex-grow: 1; height: 6px; background: #000; border-radius: 3px; overflow: hidden; }
-        .stat-bar-fill { height: 100%; background: linear-gradient(90deg, #555, var(--gold)); border-radius: 3px; }
-
-        /* 賽道 */
+        /* 賽道與馬匹 */
         #track { display: none; height: 100vh; width: 100vw; background: #111; position: relative; }
-        .lane { position: relative; border-bottom: 1px solid #222; display: flex; align-items: center; width: 100%; }
-        .horse-container { position: absolute; left: 0; display: flex; align-items: center; width: 120px; will-change: left; }
-        .horse-icon { font-size: 30px; transform: scaleX(-1); }
-        .finish-line { position: absolute; right: 50px; top: 0; bottom: 0; width: 10px; background: repeating-linear-gradient(0deg, #fff, #fff 10px, #000 10px, #000 20px); }
+        .lane { position: relative; border-bottom: 1px solid #222; width: 100%; box-sizing: border-box; }
+        .horse-container { position: absolute; left: 0; display: flex; align-items: center; width: 120px; transition: left 0.1s linear; }
+        .horse-icon { font-size: 32px; transform: scaleX(-1); }
+        .horse-info { margin-left: 5px; }
+        .stamina-track { width: 45px; height: 5px; background: #000; border-radius: 3px; margin-top: 2px; }
+        .stamina-fill { height: 100%; background: var(--success); transition: width 0.3s; }
+        .status-bubble { 
+            position: absolute; top: -35px; left: 0; font-size: 11px; padding: 3px 10px; 
+            border-radius: 10px; white-space: nowrap; font-weight: bold; border: 1px solid #fff;
+            display: none; animation: bounce 0.5s infinite alternate;
+        }
+        @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-3px); } }
 
-        /* 管理者工具 */
-        .admin-controls { position: fixed; bottom: 20px; left: 0; right: 0; display: flex; justify-content: center; gap: 10px; z-index: 2000; }
-        .admin-btn { padding: 12px 25px; border-radius: 25px; border: none; font-weight: bold; color: white; }
+        .finish-line { position: absolute; right: 60px; top: 0; bottom: 0; width: 15px; background: repeating-linear-gradient(0deg, #fff, #fff 10px, #000 10px, #000 20px); border-left: 2px solid var(--gold); }
 
-        /* 結算 */
-        #leaderboard { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 3000; display: none; align-items: center; justify-content: center; }
-        .prize-box { background: white; color: black; width: 85%; border-radius: 15px; padding: 20px; max-height: 80vh; overflow-y: auto; }
+        /* 排行榜 */
+        #leaderboard { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 2000; display: none; align-items: center; justify-content: center; }
+        .lb-box { background: white; color: #111; width: 85%; border-radius: 20px; padding: 25px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+        
+        /* 管理員按鈕 */
+        .admin-bar { position: fixed; bottom: 20px; left: 0; right: 0; display: none; justify-content: center; gap: 10px; z-index: 3000; }
+        .btn-main { padding: 12px 25px; border-radius: 30px; border: none; font-weight: bold; color: white; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
     </style>
 </head>
 <body>
 
-<audio id="bgm" loop src="https://actions.google.com/sounds/v1/sports/crowd_cheer.ogg"></audio>
-<audio id="race-bgm" loop src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"></audio>
+<audio id="bgm-lobby" loop src="https://actions.google.com/sounds/v1/sports/crowd_cheer.ogg"></audio>
+<audio id="bgm-race" loop src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3"></audio>
 
-<div class="user-status-bar" id="status-bar" style="display:none;">
-    <span>目前角色: <b id="display-name" style="color:var(--gold)"></b></span>
-    <button class="logout-btn" onclick="logout()">重選人物</button>
+<div class="header-bar" id="header" style="display:none;">
+    <div class="user-tag">角色：<span id="my-name-display"></span></div>
+    <button class="back-btn" id="btn-re-login">切換人物</button>
 </div>
 
 <div id="user-login">
-    <h2 style="color:var(--gold)">💼 2026 AIOT 尾牙賽馬</h2>
-    <p>請選擇您的身份</p>
+    <h2 style="color:var(--gold); letter-spacing: 2px;">💼 2026 AIOT 尾牙賽馬</h2>
+    <p style="color: #888;">請點擊您的名字登入</p>
     <div class="name-grid" id="name-grid"></div>
 </div>
 
 <div id="setup">
-    <h3 style="text-align:center">請挑選你的戰馬</h3>
+    <h3 style="text-align:center; color: var(--gold);">🐎 挑選您的戰馬</h3>
     <div id="select-grid"></div>
 </div>
 
@@ -92,17 +95,20 @@
     <div id="lanes-box" style="height:100%"></div>
 </div>
 
-<div id="admin-panel" class="admin-controls" style="display:none;">
-    <button class="admin-btn" style="background:var(--success)" onclick="startRace()">🏁 開始遊戲</button>
-    <button class="admin-btn" style="background:var(--primary)" onclick="resetGame()">🔄 重置全場</button>
+<div id="leaderboard">
+    <div class="lb-box">
+        <h2 style="text-align:center; color: var(--primary); margin-top: 0;">🏆 決賽成績 🏆</h2>
+        <div id="leaderboard-list"></div>
+        <div id="admin-reset-area" style="display:none; margin-top: 20px;">
+            <button onclick="adminReset()" style="width:100%; padding:15px; background: #333; color: white; border: none; border-radius: 10px; font-weight: bold;">強制重啟下一輪</button>
+        </div>
+        <p id="user-wait-msg" style="text-align:center; color:#888; font-size: 12px; margin-top: 15px;">請等待管理者重置遊戲...</p>
+    </div>
 </div>
 
-<div id="leaderboard">
-    <div class="prize-box">
-        <h2 style="text-align:center;color:var(--primary)">🏆 最終名次 🏆</h2>
-        <div id="leaderboard-list"></div>
-        <button onclick="location.reload()" style="width:100%; padding:12px; margin-top:15px; border-radius:8px;">關閉</button>
-    </div>
+<div id="admin-panel" class="admin-bar">
+    <button class="btn-main" style="background:var(--success)" onclick="adminStart()">🏁 開始遊戲</button>
+    <button class="btn-main" style="background:var(--primary)" onclick="adminReset()">🔄 強制重置</button>
 </div>
 
 <script>
@@ -125,242 +131,285 @@
         { id: 2, trait: "爆肝王", stats: {spd: 95, sta: 25, burst: 80, lck: 30}, desc: "起步瞬間即巔峰，但需注意健康警訊。" },
         { id: 3, trait: "會議發言機", stats: {spd: 75, sta: 60, burst: 60, lck: 80}, desc: "節奏感極強，能以穩定的語速壓制全場。" },
         { id: 4, trait: "咖啡中毒者", stats: {spd: 80, sta: 45, burst: 75, lck: 50}, desc: "依賴興奮劑，速度取決於早上的拿鐵濃度。" },
-        { id: 5, trait: "甩鍋專業戶", stats: {spd: 45, sta: 85, burst: 30, lck: 99}, desc: "擁有神級閃避，任何障礙與責任都碰不到牠。" },
+        { id: 5, trait: "甩鍋專業戶", stats: {spd: 45, sta: 85, burst: 30, lck: 99}, desc: "擁有神級閃閃，任何障礙與責任都碰不到牠。" },
         { id: 6, trait: "加班邊緣人", stats: {spd: 55, sta: 90, burst: 50, lck: 60}, desc: "沒人注意到牠已悄悄跑到最前面。" },
         { id: 7, trait: "截稿衝刺", stats: {spd: 35, sta: 70, burst: 99, lck: 40}, desc: "在最後一秒前，你永遠不知道牠會爆發什麼。" },
         { id: 8, trait: "出一張嘴", stats: {spd: 85, sta: 50, burst: 70, lck: 60}, desc: "用氣勢驅動四肢，速度快到讓人無法反駁。" },
         { id: 9, trait: "中庸之道", stats: {spd: 70, sta: 75, burst: 65, lck: 70}, desc: "不求最快，但絕對活得比任何馬都久。" }
     ];
 
-    let names = ["JULIA", "MOLLY", "DON", "豪哥", "Gimme", "Erick", "韋志", "JULI", "JASON", "KRIS"];
+    const names = ["JULIA", "MOLLY", "DON", "豪哥", "Gimme", "Erick", "韋志", "JULI", "JASON", "KRIS"];
     let myName = localStorage.getItem('race_user') || "";
     const isAdmin = new URLSearchParams(window.location.search).get('admin') === '1';
-    let serverTimeOffset = 0;
+    let serverOffset = 0;
 
-    // 校正伺服器時間
-    db.ref(".info/serverTimeOffset").on("value", (snap) => {
-        serverTimeOffset = snap.val();
-    });
+    db.ref(".info/serverTimeOffset").on("value", s => serverOffset = s.val());
 
     function init() {
-        if (isAdmin) document.getElementById('admin-panel').style.display = 'flex';
-        renderLogin();
-        renderSelection();
-        listenFirebase();
-    }
-
-    function renderLogin() {
-        const grid = document.getElementById('name-grid');
-        grid.innerHTML = "";
+        if (isAdmin) {
+            document.getElementById('admin-panel').style.display = 'flex';
+            document.getElementById('admin-reset-area').style.display = 'block';
+            document.getElementById('user-wait-msg').style.display = 'none';
+        }
+        
+        // 渲染名字按鈕
+        const nGrid = document.getElementById('name-grid');
         names.forEach(n => {
-            const btn = document.createElement('button');
-            btn.className = 'name-btn';
-            btn.id = `login-${n}`;
-            btn.innerText = n;
-            btn.onclick = () => login(n);
-            grid.appendChild(btn);
+            const b = document.createElement('button');
+            b.className = 'name-btn';
+            b.id = `btn-name-${n}`;
+            b.innerText = n;
+            b.onclick = () => {
+                myName = n;
+                localStorage.setItem('race_user', n);
+                db.ref(`users/${n}`).set(true);
+                document.getElementById('bgm-lobby').play().catch(()=>{});
+            };
+            nGrid.appendChild(b);
         });
-    }
 
-    function renderSelection() {
-        const grid = document.getElementById('select-grid');
-        grid.innerHTML = "";
+        // 渲染馬匹
+        const sGrid = document.getElementById('select-grid');
         horseLibrary.forEach((h, i) => {
-            const div = document.createElement('div');
-            div.className = 'horse-slot';
-            div.id = `slot-${i}`;
-            div.innerHTML = `
-                <div style="display:flex; justify-content:space-between">
-                    <b>${h.trait}</b> <span style="font-size:10px; color:#666">STAFF-${i+1}</span>
+            const d = document.createElement('div');
+            d.className = 'horse-slot';
+            d.id = `slot-${i}`;
+            d.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <b style="color:var(--gold); font-size:16px;">${h.trait}</b>
+                    <span style="font-size:10px; color:#666;">#${i+1}</span>
                 </div>
-                <div class="stat-viz">
-                    ${Object.entries(h.stats).map(([k, v]) => `
-                        <div class="stat-line">
-                            <span class="stat-label">${translateStat(k)}</span>
-                            <div class="stat-bar-bg"><div class="stat-bar-fill" style="width:${v}%"></div></div>
+                <div class="stat-bar-group">
+                    ${Object.entries(h.stats).map(([k,v]) => `
+                        <div class="stat-row">
+                            <span class="stat-label">${{spd:'速度',sta:'體力',burst:'爆發',lck:'幸運'}[k]}</span>
+                            <div class="stat-outer"><div class="stat-inner" style="width:${v}%"></div></div>
                         </div>
                     `).join('')}
                 </div>
-                <p style="font-size:11px; color:#888; margin-top:8px;">${h.desc}</p>
+                <div style="font-size:11px; color:#aaa; font-style:italic;">${h.desc}</div>
             `;
-            div.onclick = () => selectHorse(i);
-            grid.appendChild(div);
+            d.onclick = () => { if(myName) db.ref(`assignments/${myName}`).set(i); };
+            sGrid.appendChild(d);
         });
-    }
 
-    function translateStat(s) { const m = {spd:'速度', sta:'體力', burst:'爆發', lck:'幸運'}; return m[s]; }
+        document.getElementById('btn-re-login').onclick = () => {
+            if(myName) db.ref(`users/${myName}`).remove();
+            if(myName) db.ref(`assignments/${myName}`).remove();
+            localStorage.removeItem('race_user');
+            location.reload();
+        };
 
-    function login(n) {
-        myName = n;
-        localStorage.setItem('race_user', n);
-        db.ref(`users/${n}`).set(true);
-        document.getElementById('bgm').play().catch(()=>{});
-    }
-
-    function logout() {
-        if (myName) db.ref(`users/${myName}`).remove();
-        if (myName) db.ref(`assignments/${myName}`).remove();
-        myName = "";
-        localStorage.removeItem('race_user');
-        location.reload();
-    }
-
-    function selectHorse(idx) {
-        if (!myName) return;
-        db.ref(`assignments/${myName}`).set(idx);
+        listenFirebase();
     }
 
     function listenFirebase() {
-        // 同步登入狀態
+        // 監聽用戶登入
         db.ref('users').on('value', snap => {
-            const val = snap.val() || {};
+            const u = snap.val() || {};
             names.forEach(n => {
-                const btn = document.getElementById(`login-${n}`);
-                if (val[n]) btn.classList.add('taken');
-                else btn.classList.remove('taken');
+                const b = document.getElementById(`btn-name-${n}`);
+                u[n] ? b.classList.add('taken') : b.classList.remove('taken');
             });
-            if (myName && val[myName]) {
+            if (myName && u[myName]) {
                 document.getElementById('user-login').style.display = 'none';
-                document.getElementById('status-bar').style.display = 'flex';
+                document.getElementById('header').style.display = 'flex';
                 document.getElementById('setup').style.display = 'block';
-                document.getElementById('display-name').innerText = myName;
+                document.getElementById('my-name-display').innerText = myName;
             }
         });
 
-        // 同步馬匹選擇
+        // 監聽選馬
         db.ref('assignments').on('value', snap => {
-            const val = snap.val() || {};
+            const a = snap.val() || {};
             horseLibrary.forEach((_, i) => {
-                const slot = document.getElementById(`slot-${i}`);
-                const owner = Object.keys(val).find(k => val[k] === i);
-                slot.className = 'horse-slot';
-                if (owner === myName) slot.classList.add('my-pick');
-                else if (owner) slot.classList.add('occupied');
+                const s = document.getElementById(`slot-${i}`);
+                const owner = Object.keys(a).find(k => a[k] === i);
+                s.className = 'horse-slot';
+                if (owner === myName) s.classList.add('my-pick');
+                else if (owner) s.classList.add('occupied');
             });
         });
 
-        // 監聽比賽開始
+        // 監聽遊戲狀態
         db.ref('gameState').on('value', snap => {
-            const state = snap.val();
-            if (state && state.status === 'racing') {
-                runRace(state);
-            } else if (state && state.status === 'idle' && document.getElementById('track').style.display === 'block') {
+            const s = snap.val();
+            if (s && s.status === 'racing') {
+                runSyncRace(s);
+            } else if (s && s.status === 'idle') {
+                // 如果管理者重置，所有人強制回到最初狀態
+                localStorage.removeItem('race_user');
                 location.reload();
             }
         });
     }
 
-    // 管理者：生成劇本
-    function startRace() {
+    // 管理者生成比賽腳本 (包含爆肝與事件)
+    function adminStart() {
         db.ref('assignments').once('value', snap => {
             const players = snap.val();
             if (!players) return alert("沒人選馬！");
             
             const raceData = {};
-            Object.entries(players).forEach(([name, horseIdx]) => {
-                const stats = horseLibrary[horseIdx].stats;
-                // 決定總奔跑時間 (25~35秒間)
-                const baseTime = 30 - (stats.spd / 10) + (Math.random() * 5);
+            Object.entries(players).forEach(([name, hIdx]) => {
+                const h = horseLibrary[hIdx];
+                // 基礎完成時間 (約 25-35秒)
+                const baseDuration = 30 - (h.stats.spd / 15) + (Math.random() * 4);
+                
+                // 預計算「滑倒」或「衝刺」時間點 (隨機取兩個時間點)
+                const event1Time = 5 + Math.random() * 10;
+                const event2Time = 18 + Math.random() * 8;
+                
                 raceData[name] = {
-                    horseIdx,
-                    totalTime: baseTime,
-                    shake: 2 + Math.random() * 3 // 跑步抖動感
+                    hIdx, 
+                    totalTime: baseDuration,
+                    stamina: h.stats.sta,
+                    events: [
+                        { t: event1Time, type: Math.random() > 0.7 ? 'slip' : 'none' },
+                        { t: event2Time, type: Math.random() > 0.6 ? 'burst' : 'none' }
+                    ]
                 };
             });
 
             db.ref('gameState').set({
                 status: 'racing',
-                startTime: Date.now() + serverTimeOffset + 3000, // 3秒後倒數開始
+                startTime: Date.now() + serverOffset + 3000,
                 raceData: raceData
             });
         });
     }
 
-    function resetGame() {
-        if (confirm("確定重置？")) db.ref().set({ gameState: { status: 'idle' } });
+    function adminReset() {
+        if(confirm("確定重置全場遊戲？這會讓所有人重新登入。")) {
+            db.ref().set({ gameState: { status: 'idle' } });
+        }
     }
 
-    // 核心：劇本播放引擎
-    function runRace(state) {
+    // 同步渲染引擎
+    function runSyncRace(state) {
         document.getElementById('setup').style.display = 'none';
-        document.getElementById('status-bar').style.display = 'none';
+        document.getElementById('header').style.display = 'none';
         document.getElementById('track').style.display = 'block';
-        document.getElementById('bgm').pause();
-        document.getElementById('race-bgm').play().catch(()=>{});
+        document.getElementById('bgm-lobby').pause();
+        document.getElementById('bgm-race').play().catch(()=>{});
 
         const box = document.getElementById('lanes-box');
         box.innerHTML = "";
-        const participants = Object.entries(state.raceData);
-        const laneH = 100 / participants.length;
+        const players = Object.entries(state.raceData);
+        const laneH = 100 / Math.max(players.length, 5);
 
-        participants.forEach(([name, data], idx) => {
+        players.forEach(([name, data], idx) => {
             const div = document.createElement('div');
             div.className = 'lane';
             div.style.height = `${laneH}%`;
             div.innerHTML = `
-                <div class="horse-container" id="horse-${idx}">
+                <div class="horse-container" id="horse-wrap-${idx}">
+                    <div class="status-bubble" id="bubble-${idx}"></div>
                     <div class="horse-icon">🐎</div>
-                    <div style="font-size:12px;">${name}</div>
+                    <div class="horse-info">
+                        <div style="font-size:12px; font-weight:bold;">${name}</div>
+                        <div class="stamina-track"><div class="stamina-fill" id="stam-fill-${idx}"></div></div>
+                    </div>
                 </div>
             `;
             box.appendChild(div);
         });
 
-        const finishX = document.getElementById('track').offsetWidth - 120;
+        const finishX = document.getElementById('track').offsetWidth - 110;
 
-        function frame() {
-            const now = Date.now() + serverTimeOffset;
+        function update() {
+            const now = Date.now() + serverOffset;
             const elapsed = (now - state.startTime) / 1000;
 
-            if (elapsed < 0) {
-                requestAnimationFrame(frame);
-                return;
-            }
+            if (elapsed < 0) { requestAnimationFrame(update); return; }
 
-            let allFinished = true;
-            const results = [];
+            let finishedCount = 0;
+            const rankings = [];
 
-            participants.forEach(([name, data], idx) => {
-                const el = document.getElementById(`horse-${idx}`);
-                // 根據進度百分比計算位置： (已過時間 / 總時間)
-                let progress = Math.min(1, elapsed / data.totalTime);
-                let currentX = progress * finishX;
+            players.forEach(([name, data], idx) => {
+                const el = document.getElementById(`horse-wrap-${idx}`);
+                const bub = document.getElementById(`bubble-${idx}`);
+                const sFill = document.getElementById(`stam-fill-${idx}`);
                 
-                // 加入一點點物理震動感
-                let sway = progress < 1 ? Math.sin(elapsed * 15) * data.shake : 0;
-                el.style.left = currentX + "px";
-                el.style.top = (sway + 10) + "px";
+                // 1. 計算體力消耗 (每秒消耗速率依據劇本長度)
+                const drainRate = 100 / (data.totalTime * 0.7); // 體力會在 70% 進程耗盡
+                let currStam = Math.max(0, 100 - (elapsed * drainRate * (100/data.stamina)));
+                sFill.style.width = currStam + "%";
+                sFill.style.background = currStam < 20 ? 'var(--danger)' : (currStam < 50 ? 'var(--warning)' : 'var(--success)');
 
-                if (progress < 1) allFinished = false;
-                results.push({ name, time: data.totalTime });
+                // 2. 判斷狀態事件 (爆肝、滑倒、衝刺)
+                let speedMult = 1.0;
+                bub.style.display = "none";
+
+                // 爆肝判定
+                if (currStam <= 0) {
+                    const exhaustionPeriod = Math.floor(elapsed) % 6; // 每6秒循環一次嘔吐
+                    if (exhaustionPeriod < 2) {
+                        speedMult = 0.2;
+                        bub.innerText = "🤮 爆肝中...";
+                        bub.style.display = "block";
+                        bub.style.background = "var(--danger)";
+                    }
+                }
+
+                // 劇本事件判定
+                data.events.forEach(ev => {
+                    if (elapsed > ev.t && elapsed < ev.t + 2) {
+                        if (ev.type === 'slip') {
+                            speedMult = 0.1;
+                            bub.innerText = "⛸️ 滑倒了！";
+                            bub.style.display = "block";
+                            bub.style.background = "#546e7a";
+                        } else if (ev.type === 'burst') {
+                            speedMult = 1.8;
+                            bub.innerText = "⚡ 衝刺！";
+                            bub.style.display = "block";
+                            bub.style.background = "var(--sprint)";
+                        }
+                    }
+                });
+
+                // 3. 計算位移 (這裡採用進度百分比，確保終點完全一致)
+                // 為了讓速度感有變化，我們根據 speedMult 調整進度增加的速度
+                let progress = Math.min(1, elapsed / data.totalTime * speedMult);
+                // 補償機制：如果因為事件慢了，要在後面追回來，或是直接由 totalTime 定義最終落點
+                // 這裡採用最簡單的：elapsed / totalTime，但事件發生時畫面抖動或稍微減速
+                let finalProgress = Math.min(1, elapsed / data.totalTime);
+                if (bub.style.display === "block" && speedMult < 1) finalProgress -= 0.02; // 視覺上的滯後
+
+                el.style.left = (finalProgress * finishX) + "px";
+
+                if (finalProgress >= 1) {
+                    finishedCount++;
+                    rankings.push({name, time: data.totalTime});
+                }
             });
 
-            if (!allFinished) {
-                requestAnimationFrame(frame);
+            if (finishedCount < players.length) {
+                requestAnimationFrame(update);
             } else {
-                setTimeout(() => showFinal(results), 1000);
+                setTimeout(() => showLeaderboard(rankings), 1000);
             }
         }
-        requestAnimationFrame(frame);
+        requestAnimationFrame(update);
     }
 
-    function showFinal(results) {
-        const sorted = results.sort((a,b) => a.time - b.time);
+    function showLeaderboard(res) {
+        const sorted = res.sort((a,b) => a.time - b.time);
         document.getElementById('leaderboard').style.display = 'flex';
         const list = document.getElementById('leaderboard-list');
         list.innerHTML = sorted.map((r, i) => `
-            <div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #eee; font-weight:bold">
+            <div style="display:flex; justify-content:space-between; padding:12px; border-bottom:1px solid #eee; font-weight:bold; font-size:15px;">
                 <span>#${i+1} ${r.name}</span>
                 <span style="color:var(--primary)">${getPrize(i+1)}</span>
             </div>
         `).join('');
     }
 
-    function getPrize(rank) {
-        if (rank === 1) return "$2500";
-        if (rank <= 5) return "$1000禮券";
-        const others = {6:"$500", 7:"$400", 8:"$300", 9:"$200", 10:"$100"};
-        return others[rank] || "$0";
+    function getPrize(r) {
+        if (r === 1) return "$2500";
+        if (r <= 5) return "$1000禮券";
+        return {6:"$500", 7:"$400", 8:"$300", 9:"$200", 10:"$100"}[r] || "-";
     }
 
     init();
