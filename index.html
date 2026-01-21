@@ -1,433 +1,821 @@
 <!DOCTYPE html>
+
 <html lang="zh-TW">
+
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 AIOT 尾牙賽馬 - 專業優化版</title>
+
+    <title>2026 AIOT 尾牙賽馬 - 獎金頒獎優化版 </title>
+
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
     <style>
-        :root { --primary: #d32f2f; --gold: #ffd700; --track-bg: #2c3e50; --success: #4caf50; --warning: #ffeb3b; --danger: #ff5252; --recover: #00bcd4; --sprint: #ff5722; --dark-card: #1e1e1e; }
+
+        :root { --primary: #d32f2f; --gold: #ffd700; --track-bg: #2c3e50; --success: #4caf50; --warning: #ffeb3b; --danger: #ff5252; --recover: #00bcd4; --sprint: #ff5722; }
+
+        body { font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; background: #121212; color: white; margin: 0; padding: 10px; height: 100vh; display: flex; flex-direction: column; align-items: center; overflow: hidden; }
+
         
-        body { 
-            font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; 
-            background: #121212; color: white; margin: 0; padding: 0; 
-            height: 100vh; width: 100vw; display: flex; flex-direction: column; 
-            overflow: hidden; 
-        }
 
-        /* 管理者工具列 - 浮動感 */
-        #admin-controls {
-            display: none; background: rgba(0,0,0,0.8); padding: 10px;
-            justify-content: center; gap: 10px; border-bottom: 1px solid var(--gold);
-            z-index: 1000;
-        }
+        /* 選人畫面 */
 
-        /* 標題優化 */
-        #main-title { 
-            font-size: 1.2rem; margin: 15px 0; color: var(--gold); 
-            text-align: center; letter-spacing: 2px;
-        }
+        #user-login { background: #1e1e1e; padding: 30px; border-radius: 20px; text-align: center; z-index: 200; position: fixed; top: 50%; transform: translateY(-50%); width: 90%; max-width: 500px; border: 2px solid var(--gold); }
 
-        /* 登入與選馬容器 */
-        .container {
-            flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; align-items: center;
-        }
+        .name-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 20px; }
 
-        /* 選人與選馬卡片樣式 */
-        #user-login, .setup-area { 
-            background: var(--dark-card); padding: 20px; border-radius: 20px; 
-            width: 90%; max-width: 500px; border: 1px solid #444; 
-        }
+        .name-btn { padding: 15px; background: #333; border: 1px solid #555; color: white; border-radius: 10px; cursor: pointer; font-size: 18px; font-weight: bold; }
 
-        .name-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 15px; }
-        .name-btn { 
-            padding: 12px; background: #333; border: 1px solid #555; 
-            color: white; border-radius: 10px; font-size: 16px; font-weight: bold; 
-        }
-        .name-btn.taken { opacity: 0.3; pointer-events: none; }
-        .name-btn.me { background: var(--success); border-color: white; box-shadow: 0 0 10px var(--success); }
+        .name-btn:hover { background: var(--gold); color: black; }
 
-        /* 當前身份顯示 */
-        .identity-bar {
-            display: flex; justify-content: space-between; align-items: center;
-            background: #333; padding: 10px 15px; border-radius: 10px; margin-bottom: 15px;
-        }
+        .name-btn.taken { opacity: 0.3; pointer-events: none; text-decoration: line-through; }
 
-        /* 賽馬列表優化 - 手機適合垂直滾動 */
-        .horse-select-grid { 
-            display: flex; flex-direction: column; gap: 15px; margin-top: 10px; 
-        }
-        .horse-slot { 
-            background: linear-gradient(145deg, #252525, #1a1a1a); 
-            padding: 15px; border-radius: 12px; border: 2px solid #333; 
-            position: relative; transition: 0.2s;
-        }
-        .horse-slot.my-pick { border-color: var(--success); background: rgba(76, 175, 80, 0.1); }
-        .horse-slot.occupied { opacity: 0.4; filter: grayscale(0.8); pointer-events: none; }
+        .name-btn.me { background: var(--success); border-color: white; }
 
-        /* 賽道區 - 適應手機高度 */
-        .track-container { 
-            position: relative; width: 100%; flex: 1; background: var(--track-bg); 
-            display: none; overflow: hidden; 
-        }
-        .lane { position: relative; border-bottom: 1px dashed rgba(255,255,255,0.1); }
-        .horse-container { position: absolute; left: 10px; display: flex; align-items: center; z-index: 10; width: 120px; }
-        .horse-icon { font-size: 24px; transform: scaleX(-1); }
-        .status-bubble { 
-            position: absolute; top: -35px; left: 0; font-size: 10px; 
-            padding: 2px 8px; border-radius: 10px; white-space: nowrap; z-index: 20; 
-        }
 
-        /* 按鈕風格 */
-        .action-btn {
-            padding: 10px 20px; border-radius: 25px; border: none; font-weight: bold; cursor: pointer;
-        }
-        .btn-start { background: var(--primary); color: white; }
-        .btn-reset { background: #444; color: #ccc; }
-        .btn-back { background: transparent; color: var(--gold); border: 1px solid var(--gold); font-size: 12px; }
 
-        /* 結算畫面 */
-        #leaderboard { 
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-            width: 85%; max-width: 350px; background: white; color: #111; 
-            border-radius: 20px; padding: 20px; z-index: 2000; display: none; 
-        }
+        /* 選馬畫面 */
+
+        .setup-area { background: #1e1e1e; padding: 20px; border-radius: 20px; width: 95vw; max-width: 1200px; border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 100; overflow-y: auto; max-height: 80vh; display: none; }
+
+        .horse-select-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 15px; }
+
+        .horse-slot { background: linear-gradient(145deg, #252525, #1a1a1a); padding: 15px; border-radius: 12px; border: 2px solid #333; cursor: pointer; transition: 0.3s; position: relative; overflow: hidden; }
+
+        .horse-slot:hover { border-color: var(--gold); transform: translateY(-5px); }
+
+        .horse-slot.occupied { opacity: 0.2; filter: grayscale(1); pointer-events: none; }
+
+        .horse-slot.my-pick { border: 3px solid var(--success); box-shadow: 0 0 15px var(--success); }
+
+        .occupied-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg); background: var(--primary); color: white; padding: 5px 10px; font-weight: bold; z-index: 10; border: 1px solid white; }
+
+
+
+        .trait-tag { font-size: 10px; background: var(--primary); color: white; padding: 2px 6px; border-radius: 4px; position: absolute; top: 10px; right: 10px; }
+
+        .stat-group { margin-top: 10px; }
+
+        .stat-row { display: flex; align-items: center; margin-top: 5px; font-size: 11px; }
+
+        .stat-label { width: 45px; color: #888; }
+
+        .stat-bar { flex-grow: 1; height: 6px; background: #000; border-radius: 3px; overflow: hidden; border: 1px solid #333; }
+
+        .stat-fill { height: 100%; background: linear-gradient(90deg, #444, var(--gold)); }
+
+        .horse-desc { font-size: 11px; color: #aaa; margin-top: 10px; line-height: 1.4; font-style: italic; }
+
+
+
+        /* 賽道區 */
+
+        .track-container { position: relative; width: 98vw; flex-grow: 1; background: var(--track-bg); border: 4px solid #333; border-radius: 10px; display: none; margin-top: 20px; overflow: hidden; padding-top: 40px; }
+
+        .finish-line { position: absolute; right: 80px; top: 0; bottom: 0; width: 30px; background: repeating-linear-gradient(0deg, #fff, #fff 15px, #000 15px, #000 30px); border-left: 4px solid var(--gold); z-index: 1; }
+
+        .lane { position: relative; height: auto; min-height: 60px; border-bottom: 1px dashed rgba(255,255,255,0.05); display: flex; align-items: center; }
+
+        
+
+        .horse-container { position: absolute; left: 10px; z-index: 10; display: flex; align-items: center; width: 130px; transition: left 0.3s cubic-bezier(0.1, 0.7, 0.1, 1); }
+
+        .horse-icon { font-size: 32px; transform: scaleX(-1); margin-right: 5px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+
+        
+
+        .stamina-mini { width: 50px; height: 5px; background: #000; margin-top: 3px; border-radius: 2px; }
+
+        .stamina-mini-fill { height: 100%; background: var(--success); transition: width 0.3s; }
+
+        
+
+        .status-bubble { position: absolute; top: -42px; left: 0; font-size: 12px; padding: 4px 12px; border-radius: 12px; display: none; z-index: 100; font-weight: bold; color: white; border: 2px solid white; white-space: nowrap; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+
+
+
+        #start-btn { padding: 18px 80px; font-size: 26px; background: linear-gradient(135deg, var(--primary), #8e0000); color: white; border: none; border-radius: 50px; cursor: pointer; margin: 30px; display: none; font-weight: bold; z-index: 500; box-shadow: 0 0 20px var(--primary); }
+
+        #leaderboard { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 420px; background: white; color: #111; border-radius: 20px; padding: 25px; z-index: 1000; display: none; border: 5px solid var(--gold); box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+
+        .prize-text { color: var(--primary); font-weight: bold; font-size: 14px; }
+
     </style>
+
 </head>
+
 <body>
 
-    <div id="admin-controls">
-        <button class="action-btn btn-start" onclick="adminTriggerStart()">開始遊戲</button>
-        <button class="action-btn btn-reset" onclick="resetData()">重置遊戲</button>
+
+
+    <h2 id="main-title" style="margin: 10px; color: var(--gold); letter-spacing: 4px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">💼 2026 AIOT 尾牙賽馬 - 馬年行大運 </h2>
+
+
+
+    <div id="user-login">
+
+        <h2 style="color: var(--gold); margin-bottom: 10px;">你是誰？</h2>
+
+        <div class="name-grid" id="name-grid"></div>
+
     </div>
 
-    <h2 id="main-title">💼 2026 AIOT 尾牙賽馬</h2>
 
-    <div class="container">
-        <div id="user-login">
-            <h3 style="text-align:center; color: var(--gold);">請選擇您的姓名</h3>
-            <div class="name-grid" id="name-grid"></div>
-        </div>
 
-        <div id="setup" class="setup-area" style="display:none;">
-            <div class="identity-bar">
-                <span>身份：<b id="display-my-name" style="color:var(--gold);"></b></span>
-                <button class="action-btn btn-back" onclick="logout()">返回</button>
-            </div>
-            <h3 style="margin:0; font-size: 16px;">挑選您的戰馬</h3>
-            <div class="horse-select-grid" id="select-grid"></div>
-        </div>
+    <div id="setup" class="setup-area">
+
+        <h3 id="picker-title" style="margin:0; text-align: center; font-size: 20px; color: #fff;">請挑選你的戰馬</h3>
+
+        <div class="horse-select-grid" id="select-grid"></div>
+
     </div>
+
+
+
+    <button id="start-btn">🏁 強制開賽！</button>
+
+
 
     <div class="track-container" id="track">
+
+        <div class="finish-line"></div>
+
         <div id="lanes-box" style="height: 100%; display: flex; flex-direction: column;"></div>
-        <div style="position:absolute; right:60px; top:0; bottom:0; width:15px; background:repeating-linear-gradient(0deg, #fff, #fff 10px, #000 10px, #000 20px); opacity:0.5;"></div>
+
     </div>
+
+
 
     <div id="leaderboard">
-        <h3 style="text-align:center; color: var(--primary); margin:0;">🏆 頒獎時刻 🏆</h3>
-        <div id="leaderboard-list" style="margin-top: 15px; font-size: 14px;"></div>
-        <button onclick="location.reload()" style="width:100%; margin-top:15px; padding:10px; border-radius:10px; border:none; background:#eee;">關閉</button>
+
+        <h2 style="text-align:center; color: var(--primary); margin: 0; font-size: 32px;">🏆 FINAL RANK 🏆</h2>
+
+        <div id="leaderboard-list" style="margin-top: 20px;"></div>
+
+        <button onclick="resetData()" style="width:100%; padding:15px; margin-top:20px; background: #1a1a1a; color: white; border-radius: 10px; cursor:pointer; font-weight: bold;">清除數據重來</button>
+
     </div>
 
+
+
 <script>
-    // --- Firebase 配置 (遵照指定內容) ---
+
+    // --- 1. Firebase 配置 ---
+
     const firebaseConfig = {
+
       apiKey: "AIzaSyBHJtwI42b8i6z7zRw6tDgtR4ITSNKWrf8",
+
       authDomain: "aiot-d53dc.firebaseapp.com",
+
       databaseURL: "https://aiot-d53dc-default-rtdb.firebaseio.com",
+
       projectId: "aiot-d53dc",
+
       storageBucket: "aiot-d53dc.firebasestorage.app",
+
       messagingSenderId: "1021331253049",
+
       appId: "1:1021331253049:web:11f0695e8ab64eae0baae8",
+
       measurementId: "G-9YDKS70ZE7"
+
     };
+
     firebase.initializeApp(firebaseConfig);
+
     const db = firebase.database();
 
-    // 原始數據
+
+
     const horseLibrary = [
-        { id: 0, trait: "薪水小偷", stats: {spd: 60, sta: 95, burst: 40, lck: 70}, desc: "體力深不可測。" },
-        { id: 1, trait: "下班戰神", stats: {spd: 50, sta: 65, burst: 95, lck: 60}, desc: "夕陽西下便開啟超頻。" },
-        { id: 2, trait: "爆肝王", stats: {spd: 95, sta: 25, burst: 80, lck: 30}, desc: "起步即巔峰。" },
-        { id: 3, trait: "會議發言機", stats: {spd: 75, sta: 60, burst: 60, lck: 80}, desc: "節奏穩定的壓制。" },
-        { id: 4, trait: "咖啡中毒者", stats: {spd: 80, sta: 45, burst: 75, lck: 50}, desc: "依賴拿鐵濃度。" },
-        { id: 5, trait: "甩鍋專業戶", stats: {spd: 45, sta: 85, burst: 30, lck: 99}, desc: "責任都碰不到牠。" },
-        { id: 6, trait: "加班邊緣人", stats: {spd: 55, sta: 90, burst: 50, lck: 60}, desc: "悄悄跑到最前面。" },
-        { id: 7, trait: "截稿衝刺", stats: {spd: 35, sta: 70, burst: 99, lck: 40}, desc: "最後一秒才爆發。" },
-        { id: 8, trait: "出一張嘴", stats: {spd: 85, sta: 50, burst: 70, lck: 60}, desc: "氣勢驅動四肢。" },
-        { id: 9, trait: "中庸之道", stats: {spd: 70, sta: 75, burst: 65, lck: 70}, desc: "活得比誰都久。" }
+
+        { id: 0, trait: "薪水小偷", stats: {spd: 60, sta: 95, burst: 40, lck: 70}, desc: "擅長在主管視線外緩步前進，體力條深不可測。"},
+
+        { id: 1, trait: "下班戰神", stats: {spd: 50, sta: 65, burst: 95, lck: 60}, desc: "平時節能模式，一旦夕陽西下便開啟超頻模式。"},
+
+        { id: 2, trait: "爆肝王", stats: {spd: 95, sta: 25, burst: 80, lck: 30}, desc: "起步瞬間即巔峰，但需注意健康警訊。"},
+
+        { id: 3, trait: "會議發言機", stats: {spd: 75, sta: 60, burst: 60, lck: 80}, desc: "節奏感極強，能以穩定的語速壓制全場。"},
+
+        { id: 4, trait: "咖啡中毒者", stats: {spd: 80, sta: 45, burst: 75, lck: 50}, desc: "依賴興奮劑，速度取決於早上的拿鐵濃度。"},
+
+        { id: 5, trait: "甩鍋專業戶", stats: {spd: 45, sta: 85, burst: 30, lck: 99}, desc: "擁有神級閃避，任何障礙與責任都碰不到牠。"},
+
+        { id: 6, trait: "加班邊緣人", stats: {spd: 55, sta: 90, burst: 50, lck: 60}, desc: "沒人注意到牠已悄悄跑到最前面。"},
+
+        { id: 7, trait: "截稿衝刺", stats: {spd: 35, sta: 70, burst: 99, lck: 40}, desc: "在最後一秒前，你永遠不知道牠會爆發什麼。"},
+
+        { id: 8, trait: "出一張嘴", stats: {spd: 85, sta: 50, burst: 70, lck: 60}, desc: "用氣勢驅動四肢，速度快到讓人無法反駁。"},
+
+        { id: 9, trait: "中庸之道", stats: {spd: 70, sta: 75, burst: 65, lck: 70}, desc: "不求最快，但絕對活得比任何馬都久。"}
+
     ];
 
+
+
     let names = ["JULIA", "MOLLY", "DON", "豪哥", "Gimme", "Erick", "韋志", "JULI", "JASON", "KRIS"];
+
     const colors = ["#FF5252", "#FFD700", "#E040FB", "#00E676", "#2979FF", "#FF9100", "#40C4FF", "#FF1744", "#F4FF81", "#B2FF59"];
-    
+
+
+
     let myName = localStorage.getItem('my_race_name') || "";
-    const isAdmin = new URLSearchParams(window.location.search).get('admin') === '1';
+
+    const urlParams = new URLSearchParams(window.location.search);
+
+    const isAdmin = urlParams.get('admin') === '1';
+
     let raceStarted = false;
+
     let finishedHorses = [];
 
+
+
     function init() {
-        if (isAdmin) document.getElementById('admin-controls').style.display = 'flex';
+
+        if (isAdmin) document.getElementById('start-btn').style.display = 'block';
+
         
+
         const nameGrid = document.getElementById('name-grid');
-        nameGrid.innerHTML = "";
+
         names.forEach(n => {
+
             const btn = document.createElement('button');
+
             btn.className = 'name-btn';
+
             btn.id = `name-${n}`;
+
             btn.innerText = n;
+
             btn.onclick = () => login(n);
+
             nameGrid.appendChild(btn);
+
         });
+
+
 
         const horseGrid = document.getElementById('select-grid');
-        horseGrid.innerHTML = "";
+
         horseLibrary.forEach((h, i) => {
+
             const div = document.createElement('div');
+
             div.className = 'horse-slot';
+
             div.id = `slot-${i}`;
+
             div.innerHTML = `
-                <div style="display:flex; justify-content:space-between;">
-                    <b style="color:var(--gold);">${h.trait}</b>
-                    <small>No.${i+1}</small>
+
+                <div class="trait-tag">STAFF-${i+1}</div>
+
+                <div style="font-size:28px; transform: scaleX(-1);">🐎</div>
+
+                <b style="color:var(--gold); font-size:16px;">${h.trait}</b>
+
+                <div class="stat-group">
+
+                    <div class="stat-row"><span class="stat-label">速度</span><div class="stat-bar"><div class="stat-fill" style="width:${h.stats.spd}%"></div></div></div>
+
+                    <div class="stat-row"><span class="stat-label">體力</span><div class="stat-bar"><div class="stat-fill" style="width:${h.stats.sta}%"></div></div></div>
+
+                    <div class="stat-row"><span class="stat-label">爆發</span><div class="stat-bar"><div class="stat-fill" style="width:${h.stats.burst}%"></div></div></div>
+
+                    <div class="stat-row"><span class="stat-label">幸運</span><div class="stat-bar"><div class="stat-fill" style="width:${h.stats.lck}%"></div></div></div>
+
                 </div>
-                <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
-                    <div style="font-size:24px; transform: scaleX(-1);">🐎</div>
-                    <div style="flex:1;">
-                        <div class="stat-row" style="display:flex; height:4px; background:#333; margin-bottom:4px;"><div style="width:${h.stats.spd}%; background:var(--gold);"></div></div>
-                        <div style="font-size:9px; color:#888;">Spd:${h.stats.spd} | Sta:${h.stats.sta} | Lck:${h.stats.lck}</div>
-                    </div>
-                </div>
+
+                <div class="horse-desc">${h.desc}</div>
+
             `;
+
             div.onclick = () => selectHorse(i);
+
             horseGrid.appendChild(div);
+
         });
+
+
 
         listenFirebase();
+
     }
+
+
 
     function listenFirebase() {
+
         db.ref('users').on('value', (snap) => {
+
             const users = snap.val() || {};
+
             names.forEach(n => {
+
                 const btn = document.getElementById(`name-${n}`);
-                if (!btn) return;
-                btn.classList.toggle('taken', !!users[n]);
-                if (n === myName && users[n]) {
-                    btn.classList.add('me');
-                    document.getElementById('user-login').style.display = 'none';
-                    document.getElementById('setup').style.display = 'block';
-                    document.getElementById('display-my-name').innerText = myName;
+
+                if (users[n]) {
+
+                    btn.classList.add('taken');
+
+                    if (n === myName) {
+
+                        btn.classList.add('me');
+
+                        document.getElementById('user-login').style.display = 'none';
+
+                        document.getElementById('setup').style.display = 'block';
+
+                    }
+
+                } else {
+
+                    btn.classList.remove('taken', 'me');
+
                 }
+
             });
+
         });
+
+
 
         db.ref('assignments').on('value', (snap) => {
+
             const assignments = snap.val() || {};
+
             horseLibrary.forEach((_, i) => {
+
                 const slot = document.getElementById(`slot-${i}`);
-                if (!slot) return;
+
                 slot.classList.remove('occupied', 'my-pick');
-                const existingLabel = slot.querySelector('.occ-label');
-                if (existingLabel) existingLabel.remove();
+
+                const label = slot.querySelector('.occupied-label');
+
+                if (label) label.remove();
+
+
 
                 const owner = Object.keys(assignments).find(name => assignments[name] === i);
+
                 if (owner) {
+
                     if (owner === myName) {
+
                         slot.classList.add('my-pick');
+
                     } else {
+
                         slot.classList.add('occupied');
+
                         const l = document.createElement('div');
-                        l.className = 'occ-label';
-                        l.style.cssText = "position:absolute; bottom:5px; right:10px; font-size:10px; background:var(--primary); padding:2px 5px; border-radius:4px;";
+
+                        l.className = 'occupied-label';
+
                         l.innerText = owner;
+
                         slot.appendChild(l);
+
                     }
+
                 }
+
             });
+
         });
+
+
 
         db.ref('gameState').on('value', (snap) => {
+
             const state = snap.val();
+
             if (state && state.status === 'racing' && !raceStarted) {
+
                 startTheGame(state.seed, state.participants);
-            } else if (!state) {
-                // 如果後端數據被清空，重整頁面
-                if (raceStarted) location.reload();
+
             }
+
         });
+
     }
+
+
 
     function login(n) {
+
         myName = n;
+
         localStorage.setItem('my_race_name', n);
+
         db.ref(`users/${n}`).set(true);
+
     }
 
-    function logout() {
-        if (!confirm("確定要取消目前身份並返回嗎？")) return;
-        db.ref(`users/${myName}`).remove();
-        db.ref(`assignments/${myName}`).remove();
-        myName = "";
-        localStorage.removeItem('my_race_name');
-        document.getElementById('user-login').style.display = 'block';
-        document.getElementById('setup').style.display = 'none';
-    }
+
 
     function selectHorse(idx) {
+
         if (!myName) return;
+
         db.ref(`assignments/${myName}`).set(idx);
+
     }
 
-    function adminTriggerStart() {
-        db.ref('assignments').once('value', (snap) => {
-            const participants = snap.val() || {};
-            if (Object.keys(participants).length === 0) return alert("還沒人選馬！");
-            db.ref('gameState').set({
-                status: 'racing',
-                seed: Math.random(),
-                participants: participants
-            });
-        });
-    }
+
 
     function resetData() {
-        if(!confirm("【管理者】確定重置所有數據嗎？")) return;
+
+        if(!confirm("確定重置數據嗎？")) return;
+
         db.ref().set(null);
+
         localStorage.clear();
+
         location.reload();
+
     }
+
+
+
+    document.getElementById('start-btn').onclick = function() {
+
+        db.ref('assignments').once('value', (snap) => {
+
+            const participants = snap.val() || {};
+
+            db.ref('gameState').set({
+
+                status: 'racing',
+
+                seed: Math.random(),
+
+                participants: participants
+
+            });
+
+        });
+
+    };
+
+
 
     function startTheGame(seed, participants) {
+
         raceStarted = true;
+
         document.getElementById('setup').style.display = 'none';
+
+        document.getElementById('start-btn').style.display = 'none';
+
         document.getElementById('user-login').style.display = 'none';
-        document.getElementById('main-title').style.display = 'none';
+
         document.getElementById('track').style.display = 'block';
 
+
+
         const lanesBox = document.getElementById('lanes-box');
+
         lanesBox.innerHTML = "";
 
-        const finalParticipants = Object.keys(participants).map((name, idx) => ({
-            name: name, horseData: horseLibrary[participants[name]], color: colors[idx % colors.length]
-        }));
 
-        const laneHeight = 100 / finalParticipants.length;
 
-        finalParticipants.forEach((item) => {
-            const lane = document.createElement('div');
-            lane.className = 'lane';
-            lane.style.height = `${laneHeight}%`;
-            lane.innerHTML = `
-                <div class="horse-container" id="horse-${item.horseData.id}">
-                    <div class="status-bubble" id="status-${item.horseData.id}" style="display:none;"></div>
-                    <div class="horse-icon" style="color:${item.color}">🐎</div>
-                    <div style="margin-left:5px;">
-                        <div style="font-size:10px; font-weight:bold;">${item.name}</div>
-                        <div style="width:40px; height:3px; background:#000; border-radius:2px; overflow:hidden;">
-                            <div id="stamina-fill-${item.horseData.id}" style="width:100%; height:100%; background:var(--success);"></div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            lanesBox.appendChild(lane);
+        const finalParticipants = Object.keys(participants).map((name, idx) => {
+
+            const horseIdx = participants[name];
+
+            return { name: name, horseData: horseLibrary[horseIdx], color: colors[idx % colors.length] };
+
         });
+
+
+
+        const laneHeight = finalParticipants.length > 0 ? (100 / finalParticipants.length) : 100;
+
+
+
+        finalParticipants.forEach((item, idx) => {
+
+            const lane = document.createElement('div');
+
+            lane.className = 'lane';
+
+            lane.style.height = `${laneHeight}%`;
+
+            lane.innerHTML = `<div class="horse-container" id="horse-${item.horseData.id}"><div class="status-bubble" id="status-${item.horseData.id}"></div><div class="horse-icon" style="color:${item.color}">🐎</div><div class="horse-info-mini"><div class="horse-label" style="font-size:12px;">${item.name}</div><div class="stamina-mini"><div class="stamina-mini-fill" id="stamina-fill-${item.horseData.id}"></div></div></div></div>`;
+
+            lanesBox.appendChild(lane);
+
+        });
+
+
 
         runRaceEngine(seed, finalParticipants);
+
     }
+
+
 
     function runRaceEngine(seed, list) {
+
         let seedVal = seed;
-        const syncRandom = () => { seedVal = (seedVal * 9301 + 49297) % 233280; return seedVal / 233280; };
+
+        function syncRandom() {
+
+            seedVal = (seedVal * 9301 + 49297) % 233280;
+
+            return seedVal / 233280;
+
+        }
+
+
 
         const horses = list.map(item => ({ 
+
             ...item.horseData, ownerName: item.name, 
+
             pos: 10, speed: 0, currStamina: 100, 
+
             lastEventTime: Date.now() + (syncRandom() * 2000),
+
             nextCooldown: 4000 + (syncRandom() * 4000),
+
             finished: false, isStalled: false, isBursting: false 
+
         }));
+
         
-        const trackWidth = document.getElementById('track').offsetWidth;
-        const finishLinePos = trackWidth - 100;
+
+        const finishLinePos = document.getElementById('track').offsetWidth - 130; 
+
+        const raceStart = Date.now();
+
+
 
         const raceInterval = setInterval(() => {
+
+            const raceElapsed = (Date.now() - raceStart) / 1000;
+
+
+
             horses.forEach(h => {
+
                 if (h.finished) return;
 
-                // 體力消耗邏輯
+
+
                 if (!h.isStalled) {
+
                     let drainMult = h.id === 2 ? 1.8 : (h.id === 0 ? 0.45 : 1.0);
-                    h.currStamina = Math.max(0, h.currStamina - (h.speed * 0.06 + 0.12) * drainMult);
+
+                    let staminaDrain = (h.speed * 0.06 + 0.12) * drainMult; 
+
+                    h.currStamina = Math.max(0, h.currStamina - staminaDrain);
+
                 }
 
-                // 爆肝邏輯
+
+
                 if (h.currStamina <= 0 && !h.isStalled) {
-                    h.speed = 0; h.isStalled = true;
-                    updateBubble(h.id, "🤮 爆肝中", "var(--danger)");
-                    setTimeout(() => { h.currStamina = 100; h.isStalled = false; updateBubble(h.id, "", "", false); }, 5000);
+
+                    h.speed = 0; h.isStalled = true; h.isBursting = false;
+
+                    let count = 5;
+
+                    const burnTimer = setInterval(() => {
+
+                        updateBubble(h.id, `🤮 爆肝中...${count}`, "var(--danger)");
+
+                        count--;
+
+                        if (count < 0) {
+
+                            clearInterval(burnTimer);
+
+                            h.currStamina = 100; h.isStalled = false;
+
+                            updateBubble(h.id, "", "", false);
+
+                        }
+
+                    }, 1000);
+
                 }
 
-                // 移動邏輯
+
+
+                let isRedZone = h.currStamina < 20;
+
+                let fatigueScale = isRedZone ? 0.4 : (h.currStamina < 50 ? 0.8 : 1.0);
+
+                
+
                 if (!h.isStalled) {
-                    let fatigue = h.currStamina < 20 ? 0.4 : (h.currStamina < 50 ? 0.8 : 1.0);
-                    let accel = (syncRandom() * 0.22) + (h.stats.spd * 0.002);
-                    h.speed = (h.speed * 0.93 + accel) * fatigue;
-                    h.pos += h.speed + (h.isBursting ? 0.8 : 0);
+
+                    let accel = (syncRandom() * 0.22);
+
+                    if (h.id === 1 && raceElapsed >= 15) { 
+
+                        accel += 2.8; fatigueScale = 1.1; 
+
+                        if (!h.isBursting) { h.isBursting = true; updateBubble(h.id, "🔥 極限衝刺！", "var(--sprint)"); }
+
+                    }
+
+                    h.speed = ((h.speed * 0.93) + accel + (h.stats.spd * 0.002)) * fatigueScale;
+
                 }
 
-                // 隨機事件
+
+
                 if (Date.now() - h.lastEventTime > h.nextCooldown && !h.finished && !h.isStalled) {
+
                     h.lastEventTime = Date.now();
+
+                    h.nextCooldown = 4000 + (syncRandom() * 4000);
+
                     const roll = syncRandom();
-                    if (roll < 0.1 && h.id !== 5) {
-                        h.speed = 0; updateBubble(h.id, "⛸️ 滑倒!", "#546e7a");
+
+
+
+                    // 使用幸運值來降低滑倒機率
+
+                    let tripChance = 0.12 * (1 - (h.stats.lck / 200));
+
+                    if (roll < tripChance && h.id !== 5) { 
+
+                        h.speed = 0; h.pos = Math.max(10, h.pos - 40);
+
+                        updateBubble(h.id, "⛸️ 滑倒了！", "#546e7a");
+
                         setTimeout(() => updateBubble(h.id, "", "", false), 1500);
-                    } else if (roll > 0.8) {
-                        h.isBursting = true; updateBubble(h.id, "⚡ 衝刺!", "var(--sprint)");
+
+                    } else if (roll < (isRedZone ? 0.4 : 0.2)) { 
+
+                        h.speed = 0; h.isStalled = true; 
+
+                        h.currStamina = Math.min(100, h.currStamina + 45); 
+
+                        updateBubble(h.id, "🛌 躺平一下...", "var(--recover)");
+
+                        setTimeout(() => { h.isStalled = false; updateBubble(h.id, "", "", false); }, 2000);
+
+                    } else if (roll > 0.75 && !isRedZone) {
+
+                        h.isBursting = true;
+
+                        updateBubble(h.id, "⚡ 衝刺！", "var(--sprint)");
+
                         setTimeout(() => { h.isBursting = false; updateBubble(h.id, "", "", false); }, 2000);
+
                     }
+
                 }
+
+
+
+                h.pos += h.speed + (h.isBursting ? 0.9 : 0);
 
                 const element = document.getElementById(`horse-${h.id}`);
-                element.style.left = Math.min(h.pos, finishLinePos + 30) + 'px';
-                document.getElementById(`stamina-fill-${h.id}`).style.width = h.currStamina + '%';
+
+                element.style.left = Math.min(h.pos, finishLinePos + 40) + 'px';
+
+                
+
+                const sFill = document.getElementById(`stamina-fill-${h.id}`);
+
+                sFill.style.width = `${h.currStamina}%`;
+
+                sFill.style.background = isRedZone ? 'var(--danger)' : (h.currStamina < 50 ? 'var(--warning)' : 'var(--success)');
+
+                
+
+                let rot = Math.sin(h.pos / 10) * (h.speed * 2);
+
+                element.style.transform = `rotate(${rot}deg)`;
+
+
 
                 if (h.pos >= finishLinePos && !h.finished) {
+
                     h.finished = true;
+
                     finishedHorses.push(h);
+
                     if (finishedHorses.length === horses.length) {
+
                         clearInterval(raceInterval);
+
                         setTimeout(showLeaderboard, 1000);
+
                     }
+
                 }
+
             });
+
         }, 50);
+
     }
+
+
 
     function updateBubble(id, text, color, display = true) {
+
         const el = document.getElementById(`status-${id}`);
+
         if (!el) return;
-        el.innerText = text; el.style.display = display ? 'block' : 'none'; el.style.background = color;
+
+        if (!display) { el.style.display = 'none'; return; }
+
+        el.innerText = text; el.style.display = 'block'; el.style.background = color;
+
     }
+
+
 
     function showLeaderboard() {
+
         document.getElementById('leaderboard').style.display = 'block';
+
         const list = document.getElementById('leaderboard-list');
+
         list.innerHTML = "";
+
+        
+
         finishedHorses.forEach((h, i) => {
+
             const rank = i + 1;
-            const prizes = {1: "$2500", 2: "禮券$1000", 3: "禮券$1000", 4: "禮券$1000", 5: "禮券$1000", 6: "$500", 7: "$400", 8: "$300", 9: "$200", 10: "$100"};
+
             const item = document.createElement('div');
-            item.style.cssText = "display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee;";
-            item.innerHTML = `<span>#${rank} ${h.ownerName}</span><span style="color:var(--primary); font-weight:bold;">${prizes[rank] || "-"}</span>`;
+
+            item.style.cssText = "padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; font-weight:bold; align-items:center;";
+
+            
+
+            let prizeInfo = "";
+
+            let medal = `#${rank}`;
+
+
+
+            // 獎金邏輯判斷
+
+            if (rank === 1) {
+
+                medal = "🥇 第一名";
+
+                prizeInfo = "$2500";
+
+            } else if (rank >= 2 && rank <= 5) {
+
+                medal = `🥈 第${rank}名`;
+
+                prizeInfo = "新光禮券 $1000";
+
+            } else {
+
+                const prizes = {6: "$500", 7: "$400", 8: "$300", 9: "$200", 10: "$100"};
+
+                medal = `🥉 第${rank}名`;
+
+                prizeInfo = prizes[rank] || "-";
+
+            }
+
+
+
+            item.innerHTML = `
+
+                <div>
+
+                    <span style="color:var(--primary)">${medal}</span> 
+
+                    <span style="margin-left:8px;">${h.ownerName}</span>
+
+                </div>
+
+                <div class="prize-text">${prizeInfo}</div>
+
+            `;
+
             list.appendChild(item);
+
         });
+
     }
 
+
+
     init();
+
 </script>
+
 </body>
+
 </html>
