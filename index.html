@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 AIOT 尾牙賽馬 - PO 終極版</title>
+    <title>2026 AIOT 馬年賽大會</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
@@ -14,7 +14,6 @@
 
         body { font-family: 'PingFang TC', sans-serif; background: #0a0a0a; color: white; margin: 0; padding: 0; height: 100vh; overflow: hidden; }
 
-        /* 全域遊戲化控制 */
         .btn-ui { border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 0 rgba(0,0,0,0.3); }
         .btn-ui:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.3); }
 
@@ -25,7 +24,7 @@
             height: 60px; border-bottom: 2px solid var(--gold); position: relative; z-index: 1000;
         }
 
-        /* 1. 選人畫面 (恢復精緻格點) */
+        /* 頁面配置 */
         .page { display: none; height: calc(100vh - 60px); width: 100vw; position: absolute; flex-direction: column; overflow-y: auto; }
         .page.active { display: flex; }
         
@@ -36,63 +35,60 @@
         }
         .name-card.taken { opacity: 0.3; filter: grayscale(1); pointer-events: none; }
 
-        /* 2. 選馬畫面 (4能力值 + 搞笑介紹) */
-        .horse-list { padding: 15px; }
+        /* 選馬卡片優化 */
+        .horse-list { padding: 15px; padding-bottom: 100px; }
         .horse-card { 
             background: #1a1a1a; border: 2px solid #333; border-radius: 16px; padding: 15px; 
-            margin-bottom: 15px; position: relative; border-left: 6px solid #444;
+            margin-bottom: 15px; position: relative; border-left: 6px solid #444; transition: 0.3s;
         }
         .horse-card.selected { border-color: var(--success); background: #12221a; }
-        .horse-card.occupied { opacity: 0.3; pointer-events: none; }
+        .horse-card.occupied { border-color: #555; background: #0f0f0f; }
         
+        /* 顯示是誰選的 */
+        .owner-badge { position: absolute; top: 10px; right: 10px; background: var(--primary); color: white; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+
         .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
         .stat-label { font-size: 11px; color: #888; margin-bottom: 3px; }
         .stat-bar { height: 6px; background: #000; border-radius: 3px; overflow: hidden; }
         .stat-fill { height: 100%; background: var(--gold); }
         .horse-desc { font-size: 12px; color: #bbb; font-style: italic; border-top: 1px solid #333; padding-top: 8px; }
 
-        /* 3. 比賽畫面 (遊戲化) */
+        /* 比賽畫面 */
         #page-track { background: #111; overflow: hidden; }
-        .track-bg { flex-grow: 1; position: relative; background: #151515; padding-top: 60px; /* 增加頂部空間 */ }
+        .track-bg { flex-grow: 1; position: relative; background: #151515; padding-top: 80px; /* 留出泡泡空間 */ }
         .lane { position: relative; border-bottom: 1px solid #252525; height: 18%; display: flex; align-items: center; }
         
         .finish-line { 
             position: absolute; right: 0; top: 0; bottom: 0; width: 40px; 
             background: repeating-linear-gradient(45deg, #fff, #fff 10px, #000 10px, #000 20px); 
-            border-left: 4px solid var(--gold); box-shadow: -10px 0 20px rgba(0,0,0,0.5); z-index: 5;
+            border-left: 4px solid var(--gold); z-index: 5;
         }
 
-        /* 馬匹 Pawn */
         .horse-pawn { position: absolute; left: 0; display: flex; align-items: center; width: 140px; transition: left 0.1s linear; }
         .horse-visual { font-size: 40px; transform: scaleX(-1); animation: move 0.4s infinite; }
-        .horse-visual.sprinting { animation-duration: 0.2s; filter: drop-shadow(0 0 10px var(--sprint)); }
-        .horse-visual.recovering { opacity: 0.5; animation: none; }
-
         @keyframes move { 0%, 100% { transform: scaleX(-1) translateY(0); } 50% { transform: scaleX(-1) translateY(-6px); } }
 
-        /* 對話框與泡泡 */
         .speech-bubble {
-            position: absolute; top: -50px; left: 10px; background: white; color: black;
+            position: absolute; top: -55px; left: 10px; background: white; color: black;
             padding: 5px 12px; border-radius: 12px; font-size: 13px; font-weight: bold;
             box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 20; white-space: nowrap;
         }
-        .speech-bubble::after {
-            content: ''; position: absolute; bottom: -8px; left: 15px;
-            border-width: 8px 8px 0; border-style: solid; border-color: white transparent;
-        }
+        .speech-bubble::after { content: ''; position: absolute; bottom: -8px; left: 15px; border-width: 8px 8px 0; border-style: solid; border-color: white transparent; }
         .bubble-danger { background: var(--danger); color: white; }
         .bubble-danger::after { border-color: var(--danger) transparent; }
         
-        .finish-emoji { font-size: 30px; position: absolute; top: -40px; left: 20px; animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 30; }
+        /* 抵達表情動畫 */
+        .finish-emoji { font-size: 35px; position: absolute; top: -50px; left: 20px; z-index: 50; animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes pop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
 
-        /* Stamina Bar */
         .stamina-container { width: 50px; height: 4px; background: #000; border-radius: 2px; margin-top: 5px; overflow: hidden; }
         .stamina-fill { height: 100%; background: var(--success); transition: width 0.3s; }
 
-        /* 管理員介面 */
-        .admin-persistent-ctrl { position: fixed; bottom: 20px; left: 20px; z-index: 9999; display: none; gap: 10px; }
-        .btn-admin-reset { background: var(--danger); color: white; padding: 12px 20px; border-radius: 30px; }
+        /* 管理員介面優化 */
+        #admin-panel { background: rgba(0,0,0,0.9); border: 2px solid var(--gold); padding: 15px; border-radius: 15px; margin: 10px; }
+        .player-status-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin: 4px; border: 1px solid #444; }
+        .player-status-tag.ready { border-color: var(--success); color: var(--success); }
+        .admin-persistent-ctrl { position: fixed; bottom: 20px; left: 20px; z-index: 9999; display: none; flex-direction: column; gap: 10px; }
     </style>
 </head>
 <body>
@@ -100,26 +96,28 @@
 <audio id="bgm" loop src="https://assets.mixkit.co/music/preview/mixkit-fast-game-action-loop-460.mp3"></audio>
 
 <div class="header-bar" id="header">
-    <div style="flex-grow:1;"></div>
+    <div id="header-left">
+        <button class="btn-ui" id="btn-back" onclick="logout()" style="background:#444; color:white; padding:8px 15px; display:none;">⬅ 重選人物</button>
+    </div>
     <div id="header-user-info" style="text-align:right;">
-        <div style="font-size:10px; color:#888;">PLAYER</div>
         <div id="label-user-name" style="font-weight:bold; color:var(--gold);">GUEST</div>
     </div>
 </div>
 
 <div id="page-login" class="page active">
     <div style="text-align:center; padding:30px 0;">
-        <h1 style="color:var(--gold); margin:0; letter-spacing:4px;">RACE 2026</h1>
-        <p style="color:#666;">SELECT YOUR CHARACTER</p>
+        <h1 style="color:var(--gold); margin:0; letter-spacing:4px;">AIOT RACE 2026</h1>
+        <p style="color:#666;">點擊你的名字登入</p>
     </div>
     <div class="login-grid" id="login-grid"></div>
 </div>
 
 <div id="page-setup" class="page">
-    <div class="horse-list" id="horse-selection-list"></div>
-    <div style="padding: 20px; text-align: center;">
-        <button class="btn-ui" onclick="logout()" style="background:#444; color:white; padding:10px 20px;">⬅ 返回選人</button>
+    <div id="admin-monitor" style="display:none; padding:15px; background:#111; border-bottom:1px solid #333;">
+        <div style="font-size:12px; color:var(--gold); margin-bottom:5px;">[ADMIN] 玩家準備狀況：</div>
+        <div id="admin-player-list"></div>
     </div>
+    <div class="horse-list" id="horse-selection-list"></div>
 </div>
 
 <div id="page-track" class="page">
@@ -130,14 +128,14 @@
 </div>
 
 <div class="admin-persistent-ctrl" id="admin-ctrl">
-    <button class="btn-ui btn-admin-reset" onclick="adminReset()">🔄 全場重置</button>
-    <button class="btn-ui" id="admin-start-btn" onclick="adminStart()" style="background:var(--success); color:black; padding:12px 25px;">🏁 開始比賽</button>
+    <button class="btn-ui" id="admin-start-btn" onclick="adminStart()" style="background:var(--success); color:black; padding:15px 30px; font-size:18px;">🏁 開始比賽</button>
+    <button class="btn-ui" onclick="adminReset()" style="background:var(--danger); color:white; padding:10px 20px;">🔄 重置全場</button>
 </div>
 
 <div id="leaderboard-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:10000; display:none; align-items:center; justify-content:center;">
     <div style="background:white; color:black; width:85%; border-radius:20px; padding:30px; text-align:center;">
         <h2 style="color:var(--danger);">🏆 FINAL STANDINGS</h2>
-        <div id="rankings-list" style="margin:20px 0; font-weight:bold;"></div>
+        <div id="rankings-list" style="margin:20px 0; font-weight:bold; text-align: left;"></div>
         <button class="btn-ui" onclick="adminReset()" style="background:#111; color:white; width:100%; padding:15px; display:none;" id="lb-reset-btn">下一輪比賽</button>
         <p id="lb-wait-msg" style="color:#999; font-size:12px;">等待管理員重置...</p>
     </div>
@@ -167,19 +165,27 @@
         { id: 6, trait: "加班邊緣人", stats: {spd: 55, sta: 90, burst: 50, lck: 65}, desc: "雖然沒存在感，但體力驚人且跑得異常穩。" },
         { id: 7, trait: "截稿衝刺", stats: {spd: 40, sta: 70, burst: 99, lck: 40}, desc: "平時都在混，最後關頭衝刺力量無人能及。" },
         { id: 8, trait: "出一張嘴", stats: {spd: 85, sta: 50, burst: 70, lck: 65}, desc: "用氣勢驅動四肢，爆發力與速度兼具的型男。" },
-        { id: 9, trait: "中庸之道", stats: {spd: 70, sta: 75, burst: 65, lck: 70}, desc: "不求最快，但體力與運氣讓他始終在第一梯隊。" }
+        { id: 9, trait: "中庸之道", stats: {spd: 70, sta: 75, burst: 65, lck: 70}, desc: "不求最快，但體力與運氣讓他始終在第一梯隊。" },
+        // 新增 5 隻
+        { id: 10, trait: "通靈師", stats: {spd: 50, sta: 50, burst: 40, lck: 100}, desc: "能預知 Bug 發生位置，靠著神級直覺避開障礙。" },
+        { id: 11, trait: "簡報大師", stats: {spd: 90, sta: 30, burst: 90, lck: 40}, desc: "畫面很華麗，但續航力極低，沒講完就斷電。" },
+        { id: 12, trait: "Debug 錦鯉", stats: {spd: 65, sta: 65, burst: 65, lck: 95}, desc: "只要他在，程式碼自動修復，運氣就是一切。" },
+        { id: 13, trait: "飲水機守門員", stats: {spd: 40, sta: 100, burst: 20, lck: 80}, desc: "每天準時報到，體力全場最硬，慢慢磨到終點。" },
+        { id: 14, trait: "Teams 潛水員", stats: {spd: 75, sta: 75, burst: 50, lck: 50}, desc: "沒事不回訊，一旦回訊就是已經到終點了。" }
     ];
 
     const names = ["JULIA", "MOLLY", "DON", "豪哥", "Gimme", "Erick", "韋志", "JULI", "JASON", "KRIS"];
     let myName = localStorage.getItem('race_user') || "";
     const isAdmin = new URLSearchParams(window.location.search).get('admin') === '1';
     let serverOffset = 0;
+    const emojis = ["🥳", "😎", "😊", "😐", "🤔", "😓", "😫", "😭", "💀", "🪦"];
 
     db.ref(".info/serverTimeOffset").on("value", s => serverOffset = s.val());
 
     function init() {
         if (isAdmin) {
             document.getElementById('admin-ctrl').style.display = 'flex';
+            document.getElementById('admin-monitor').style.display = 'block';
             document.getElementById('lb-reset-btn').style.display = 'block';
             document.getElementById('lb-wait-msg').style.display = 'none';
         }
@@ -200,11 +206,9 @@
             d.className = 'horse-card';
             d.id = `slot-${i}`;
             d.innerHTML = `
+                <div class="owner-badge" id="owner-${i}" style="display:none;"></div>
                 <div style="font-weight:bold; color:var(--gold); font-size:18px;">${h.trait}</div>
-                <div class="stat-grid">
-                    ${renderStat("SPD", h.stats.spd)} ${renderStat("STA", h.stats.sta)}
-                    ${renderStat("BST", h.stats.burst)} ${renderStat("LCK", h.stats.lck)}
-                </div>
+                <div class="stat-grid">${renderStat("SPD", h.stats.spd)} ${renderStat("STA", h.stats.sta)} ${renderStat("BST", h.stats.burst)} ${renderStat("LCK", h.stats.lck)}</div>
                 <div class="horse-desc">${h.desc}</div>
             `;
             d.onclick = () => { if(myName) db.ref(`assignments/${myName}`).set(i); };
@@ -225,6 +229,7 @@
     }
 
     function listenFirebase() {
+        // 監控玩家登入
         db.ref('users').on('value', snap => {
             const u = snap.val() || {};
             names.forEach(n => {
@@ -234,27 +239,57 @@
             if (myName && u[myName]) {
                 switchPage('page-setup');
                 document.getElementById('label-user-name').innerText = myName;
+                document.getElementById('btn-back').style.display = 'block';
             } else {
                 switchPage('page-login');
+                document.getElementById('btn-back').style.display = 'none';
             }
+            updateAdminMonitor(u);
         });
 
+        // 監控馬匹分配
         db.ref('assignments').on('value', snap => {
             const a = snap.val() || {};
             horseLibrary.forEach((_, i) => {
                 const el = document.getElementById(`slot-${i}`);
-                if(!el) return;
+                const badge = document.getElementById(`owner-${i}`);
                 const owner = Object.keys(a).find(k => a[k] === i);
+                
                 el.className = 'horse-card';
-                if (owner === myName) el.classList.add('selected');
-                else if (owner) el.classList.add('occupied');
+                if (owner) {
+                    badge.style.display = 'block';
+                    badge.innerText = `${owner} 已選`;
+                    if (owner === myName) el.classList.add('selected');
+                    else el.classList.add('occupied');
+                } else {
+                    badge.style.display = 'none';
+                }
             });
+            db.ref('users').once('value', s => updateAdminMonitor(s.val() || {}));
         });
 
+        // 監控遊戲狀態
         db.ref('gameState').on('value', snap => {
             const s = snap.val();
-            if (s && s.status === 'racing') runRace(s);
-            if (s && s.status === 'idle' && document.getElementById('page-track').classList.contains('active')) location.reload();
+            if (s && s.status === 'racing') {
+                document.getElementById('admin-start-btn').style.display = 'none'; // 比賽中隱藏按鈕
+                runRace(s);
+            } else {
+                if (isAdmin) document.getElementById('admin-start-btn').style.display = 'block';
+                if (document.getElementById('page-track').classList.contains('active')) location.reload();
+            }
+        });
+    }
+
+    function updateAdminMonitor(users) {
+        if (!isAdmin) return;
+        db.ref('assignments').once('value', snap => {
+            const a = snap.val() || {};
+            const list = document.getElementById('admin-player-list');
+            list.innerHTML = Object.keys(users).map(name => {
+                const isReady = a[name] !== undefined;
+                return `<span class="player-status-tag ${isReady ? 'ready' : ''}">${name} ${isReady ? '✓' : '...'}</span>`;
+            }).join('');
         });
     }
 
@@ -311,9 +346,10 @@
         const finishLineX = renderArea.offsetWidth - 140;
         const runners = players.map(([name, data]) => ({
             name, stats: horseLibrary[data.hIdx].stats, events: data.events,
-            progress: 0, stamina: 100, isRecovering: false, recoveryStep: 0, recoveryEndTime: 0, finished: false
+            progress: 0, stamina: 100, isRecovering: false, finished: false
         }));
 
+        let finishCount = 0;
         let lastT = Date.now() + serverOffset;
 
         function frame() {
@@ -329,18 +365,12 @@
                 const stamFill = document.getElementById(`stam-${i}`);
 
                 if (r.isRecovering) {
-                    vis.classList.add('recovering');
                     const left = Math.ceil(r.recoveryEndTime - elapsed);
-                    if (elapsed < r.recoveryEndTime - 4) {
-                        bub.className = "speech-bubble bubble-danger";
-                        bub.innerText = "😵 已爆肝！";
-                    } else {
-                        bub.className = "speech-bubble";
-                        bub.innerText = `🩹 回血中...${left}s`;
-                    }
+                    bub.className = "speech-bubble bubble-danger";
+                    bub.innerText = "😵 爆肝中...";
                     if (elapsed >= r.recoveryEndTime) {
                         r.isRecovering = false; r.stamina = 100;
-                        bub.innerText = ""; bub.className = ""; vis.classList.remove('recovering');
+                        bub.innerText = ""; bub.className = "";
                     }
                 } else {
                     let spd = (r.stats.spd / 100) * 0.035;
@@ -353,21 +383,18 @@
                             if (ev.type === 'burst') {
                                 spd *= (1.5 + r.stats.burst/100); drain *= 5;
                                 bub.className = "speech-bubble"; bub.innerText = "🔥 衝刺！";
-                                vis.classList.add('sprinting');
                             } else {
                                 r.progress = Math.max(0, r.progress - 0.012 * dt);
                                 bub.className = "speech-bubble bubble-danger"; bub.innerText = "⛸️ 滑倒！";
-                                vis.classList.remove('sprinting');
                             }
                         }
                     });
 
-                    if (!eventActive) { bub.innerText = ""; bub.className = ""; vis.classList.remove('sprinting'); }
+                    if (!eventActive) { bub.innerText = ""; bub.className = ""; }
                     
                     r.progress += spd * dt;
                     r.stamina = Math.max(0, r.stamina - drain * dt);
                     stamFill.style.width = r.stamina + "%";
-                    stamFill.style.background = r.stamina < 20 ? 'var(--danger)' : 'var(--success)';
 
                     if (r.stamina <= 0) {
                         r.isRecovering = true;
@@ -376,12 +403,13 @@
                 }
                 document.getElementById(`pawn-${i}`).style.left = (r.progress * finishLineX) + "px";
                 
-                // 抵達終點立即顯示表情
+                // --- 核心優化：抵達終點立即顯示對應排名表情 ---
                 if (r.progress >= 1) { 
                     r.finished = true; 
                     r.finishTime = elapsed;
+                    finishCount++;
                     bub.className = "finish-emoji";
-                    bub.innerText = "😎"; // 暫時統一為這個表情，結果出來後會更新
+                    bub.innerText = emojis[finishCount - 1] || "💀";
                 }
             });
 
@@ -396,20 +424,10 @@
 
     function finishGame(results) {
         const sorted = [...results].sort((a,b) => a.finishTime - b.finishTime);
-        const emojis = ["🥳", "😎", "😊", "😐", "😐", "😓", "😓", "😭", "😭", "💀"];
-        
-        // 顯示馬匹上的表情泡泡
-        sorted.forEach((r, rank) => {
-            const idx = results.findIndex(x => x.name === r.name);
-            const bub = document.getElementById(`bubble-${idx}`);
-            bub.className = "finish-emoji";
-            bub.innerText = emojis[rank] || "💀";
-        });
-
         document.getElementById('leaderboard-overlay').style.display = 'flex';
         document.getElementById('rankings-list').innerHTML = sorted.map((r, i) => `
             <div style="display:flex; justify-content:space-between; padding:12px; border-bottom:1px solid #eee;">
-                <span>#${i+1} ${r.name}</span>
+                <span>${emojis[i] || ""} #${i+1} ${r.name}</span>
                 <span style="color:var(--primary)">${getPrize(i+1)}</span>
             </div>
         `).join('');
