@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 AIOT 尾牙賽馬 - PO 核心修正版</title>
+    <title>2026 AIOT 尾牙賽馬 - 完美修復版</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
@@ -34,7 +34,7 @@
         }
         .name-card.taken { opacity: 0.3; filter: grayscale(1); pointer-events: none; }
 
-        /* 馬匹卡片 */
+        /* 選馬卡片 */
         .horse-list { padding: 15px; padding-bottom: 120px; }
         .horse-card { 
             background: #1a1a1a; border: 2px solid #333; border-radius: 16px; padding: 15px; 
@@ -42,7 +42,6 @@
         }
         .horse-card.selected { border-color: var(--success); background: #12221a; }
         .horse-card.occupied { opacity: 0.5; filter: grayscale(0.5); cursor: not-allowed; }
-        
         .owner-badge { position: absolute; top: 10px; right: 10px; background: var(--primary); color: white; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; z-index: 2; }
 
         .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
@@ -51,20 +50,30 @@
         .stat-fill { height: 100%; background: var(--gold); }
         .horse-desc { font-size: 12px; color: #bbb; font-style: italic; border-top: 1px solid #333; padding-top: 8px; }
 
-        /* 比賽跑道 */
-        #page-track { background: #111; }
+        /* 比賽畫面 - 恢復物理動畫 */
+        #page-track { background: #111; overflow: hidden; }
         .track-bg { flex-grow: 1; position: relative; background: #151515; padding-top: 80px; }
         .lane { position: relative; border-bottom: 1px solid #252525; height: 18%; display: flex; align-items: center; }
         .finish-line { position: absolute; right: 0; top: 0; bottom: 0; width: 40px; background: repeating-linear-gradient(45deg, #fff, #fff 10px, #000 10px, #000 20px); border-left: 4px solid var(--gold); z-index: 5; }
 
         .horse-pawn { position: absolute; left: 0; display: flex; align-items: center; width: 140px; transition: left 0.1s linear; }
-        .horse-visual { font-size: 40px; transform: scaleX(-1); }
-        
-        .speech-bubble { position: absolute; top: -55px; left: 10px; background: white; color: black; padding: 5px 12px; border-radius: 12px; font-size: 13px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 20; }
-        .speech-bubble::after { content: ''; position: absolute; bottom: -8px; left: 15px; border-width: 8px 8px 0; border-style: solid; border-color: white transparent; }
-        .finish-emoji { font-size: 35px; position: absolute; top: -50px; left: 20px; z-index: 50; animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .horse-visual { font-size: 40px; transform: scaleX(-1); animation: move 0.4s infinite; }
+        @keyframes move { 0%, 100% { transform: scaleX(-1) translateY(0); } 50% { transform: scaleX(-1) translateY(-6px); } }
 
+        .speech-bubble {
+            position: absolute; top: -55px; left: 10px; background: white; color: black;
+            padding: 5px 12px; border-radius: 12px; font-size: 13px; font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 20; white-space: nowrap;
+        }
+        .speech-bubble::after { content: ''; position: absolute; bottom: -8px; left: 15px; border-width: 8px 8px 0; border-style: solid; border-color: white transparent; }
+        .bubble-danger { background: var(--danger); color: white; }
+        .bubble-danger::after { border-color: var(--danger) transparent; }
+        
+        .finish-emoji { font-size: 35px; position: absolute; top: -50px; left: 20px; z-index: 50; animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes pop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+
+        .stamina-container { width: 50px; height: 4px; background: #000; border-radius: 2px; margin-top: 5px; overflow: hidden; }
+        .stamina-fill { height: 100%; background: var(--success); transition: width 0.3s; }
 
         /* 管理員看板 */
         .admin-monitor-box { background: #1a1a1a; border: 1px solid #333; margin: 15px; padding: 12px; border-radius: 10px; }
@@ -194,21 +203,15 @@
             `;
             d.onclick = () => { 
                 if(!myName) return;
-                // --- 修正重複選馬 Bug：先檢查是否被佔用 ---
                 db.ref('assignments').once('value', snap => {
-                    const currentAssignments = snap.val() || {};
-                    const isTakenByOther = Object.entries(currentAssignments).some(([player, horseIdx]) => horseIdx === i && player !== myName);
-                    
-                    if (isTakenByOther) {
-                        alert("手速太慢！這匹馬已經被別人選走了！");
-                    } else {
-                        db.ref(`assignments/${myName}`).set(i);
-                    }
+                    const a = snap.val() || {};
+                    const isTaken = Object.entries(a).some(([p, idx]) => idx === i && p !== myName);
+                    if (isTaken) alert("這匹馬剛被選走了！");
+                    else db.ref(`assignments/${myName}`).set(i);
                 });
             };
             setupGrid.appendChild(d);
         });
-
         listenFirebase();
     }
 
@@ -216,13 +219,12 @@
         return `<div><div class="stat-label">${label}</div><div class="stat-bar"><div class="stat-fill" style="width:${val}%"></div></div></div>`;
     }
 
-    // --- 強化返回/登出邏輯 ---
     function logout() {
         if(myName) { db.ref(`users/${myName}`).remove(); db.ref(`assignments/${myName}`).remove(); }
         localStorage.removeItem('race_user');
         myName = "";
         document.getElementById('label-user-name').innerText = "GUEST";
-        location.reload(); // 重新整理最乾淨
+        location.reload();
     }
 
     function listenFirebase() {
@@ -249,16 +251,11 @@
                 const el = document.getElementById(`slot-${i}`);
                 const badge = document.getElementById(`owner-${i}`);
                 const owner = Object.keys(a).find(k => a[k] === i);
-                
                 el.classList.remove('selected', 'occupied');
                 if (owner) {
-                    badge.style.display = 'block';
-                    badge.innerText = `${owner} 已選`;
-                    if (owner === myName) el.classList.add('selected');
-                    else el.classList.add('occupied');
-                } else {
-                    badge.style.display = 'none';
-                }
+                    badge.style.display = 'block'; badge.innerText = `${owner} 已選`;
+                    if (owner === myName) el.classList.add('selected'); else el.classList.add('occupied');
+                } else badge.style.display = 'none';
             });
             db.ref('users').once('value', s => updateAdminMonitor(s.val() || {}));
         });
@@ -282,8 +279,7 @@
             const container = document.getElementById('admin-status-grid');
             container.innerHTML = Object.keys(users).map(name => {
                 const hIdx = a[name];
-                const horseName = hIdx !== undefined ? horseLibrary[hIdx].trait : "未選馬";
-                return `<span class="player-status-tag ${hIdx !== undefined ? 'ready' : ''}">${name}: ${horseName}</span>`;
+                return `<span class="player-status-tag ${hIdx !== undefined ? 'ready' : ''}">${name}: ${hIdx !== undefined ? horseLibrary[hIdx].trait : "未選馬"}</span>`;
             }).join('');
         });
     }
@@ -297,7 +293,7 @@
     function adminStart() {
         db.ref('assignments').once('value', snap => {
             const players = snap.val();
-            if (!players) return alert("還沒人選馬！");
+            if (!players) return alert("無人參賽！");
             const raceData = {};
             Object.entries(players).forEach(([name, hIdx]) => {
                 const h = horseLibrary[hIdx];
@@ -314,6 +310,7 @@
 
     function adminReset() { db.ref().set({ gameState: { status: 'idle' } }); }
 
+    // --- 恢復的核心賽跑邏輯 ---
     function runRace(state) {
         switchPage('page-track');
         const renderArea = document.getElementById('lanes-render-area');
@@ -330,7 +327,9 @@
                     <div class="horse-visual" id="vis-${idx}">🐎</div>
                     <div style="margin-left:10px;">
                         <div style="font-size:10px; font-weight:bold;">${name}</div>
-                        <div class="stamina-container"><div class="stamina-fill" id="stam-${idx}" style="width:100%; height:100%; background:var(--success);"></div></div>
+                        <div class="stamina-container">
+                            <div class="stamina-fill" id="stam-${idx}" style="width:100%"></div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -358,8 +357,12 @@
                 const stamFill = document.getElementById(`stam-${i}`);
 
                 if (r.isRecovering) {
-                    bub.className = "speech-bubble"; bub.innerText = "😵 累壞了...";
-                    if (elapsed >= r.recoveryEndTime) r.isRecovering = false;
+                    bub.className = "speech-bubble bubble-danger";
+                    bub.innerText = "😵 爆肝中...";
+                    if (elapsed >= r.recoveryEndTime) {
+                        r.isRecovering = false; r.stamina = 100;
+                        bub.innerText = ""; bub.className = "";
+                    }
                 } else {
                     let spd = (r.stats.spd / 100) * 0.035;
                     let drain = (1.5 - r.stats.sta/100) * 2.5;
@@ -368,23 +371,31 @@
                     r.events.forEach(ev => {
                         if (elapsed >= ev.t && elapsed <= ev.t + 1.5) {
                             eventActive = true;
-                            if (ev.type === 'burst') { spd *= 2; drain *= 5; bub.className = "speech-bubble"; bub.innerText = "🔥 衝刺！"; }
-                            else { r.progress = Math.max(0, r.progress - 0.01 * dt); bub.className = "speech-bubble"; bub.innerText = "⛸️ 滑倒！"; }
+                            if (ev.type === 'burst') {
+                                spd *= (1.5 + r.stats.burst/100); drain *= 5;
+                                bub.className = "speech-bubble"; bub.innerText = "🔥 衝刺！";
+                            } else {
+                                r.progress = Math.max(0, r.progress - 0.012 * dt);
+                                bub.className = "speech-bubble bubble-danger"; bub.innerText = "⛸️ 滑倒！";
+                            }
                         }
                     });
 
-                    if (!eventActive) bub.innerText = "";
+                    if (!eventActive) { bub.innerText = ""; bub.className = ""; }
+                    
                     r.progress += spd * dt;
                     r.stamina = Math.max(0, r.stamina - drain * dt);
-                    stamFill.style.width = r.stamina + "%";
+                    if(stamFill) stamFill.style.width = r.stamina + "%";
 
-                    if (r.stamina <= 0) { r.isRecovering = true; r.recoveryEndTime = elapsed + 5; }
+                    if (r.stamina <= 0) {
+                        r.isRecovering = true;
+                        r.recoveryEndTime = elapsed + 5;
+                    }
                 }
-
                 document.getElementById(`pawn-${i}`).style.left = (r.progress * finishLineX) + "px";
+                
                 if (r.progress >= 1) { 
-                    r.finished = true; 
-                    r.finishTime = elapsed;
+                    r.finished = true; r.finishTime = elapsed;
                     finishCount++;
                     bub.className = "finish-emoji";
                     bub.innerText = emojis[finishCount - 1] || "💀";
