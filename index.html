@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 AIOT 尾牙賽馬 - 完美修復版</title>
+    <title>2026 AIOT 尾牙賽馬 - PO 完整優化版</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
@@ -50,7 +50,7 @@
         .stat-fill { height: 100%; background: var(--gold); }
         .horse-desc { font-size: 12px; color: #bbb; font-style: italic; border-top: 1px solid #333; padding-top: 8px; }
 
-        /* 比賽畫面 - 恢復物理動畫 */
+        /* 比賽跑道 */
         #page-track { background: #111; overflow: hidden; }
         .track-bg { flex-grow: 1; position: relative; background: #151515; padding-top: 80px; }
         .lane { position: relative; border-bottom: 1px solid #252525; height: 18%; display: flex; align-items: center; }
@@ -75,6 +75,14 @@
         .stamina-container { width: 50px; height: 4px; background: #000; border-radius: 2px; margin-top: 5px; overflow: hidden; }
         .stamina-fill { height: 100%; background: var(--success); transition: width 0.3s; }
 
+        /* 倒數計時 */
+        #countdown-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.7); 
+            display: none; align-items: center; justify-content: center;
+            z-index: 2000; font-size: 120px; font-weight: 900; color: var(--gold);
+            text-shadow: 0 0 30px rgba(255,215,0,0.5);
+        }
+
         /* 管理員看板 */
         .admin-monitor-box { background: #1a1a1a; border: 1px solid #333; margin: 15px; padding: 12px; border-radius: 10px; }
         .player-status-tag { display: inline-block; padding: 3px 10px; border-radius: 5px; font-size: 11px; margin: 3px; background: #222; border: 1px solid #444; }
@@ -85,6 +93,7 @@
 <body>
 
 <audio id="bgm" loop src="https://assets.mixkit.co/music/preview/mixkit-fast-game-action-loop-460.mp3"></audio>
+<div id="countdown-overlay">READY</div>
 
 <div class="header-bar" id="header">
     <div id="header-left">
@@ -178,6 +187,8 @@
             document.getElementById('admin-login-monitor').style.display = 'block';
             document.getElementById('lb-reset-btn').style.display = 'block';
             document.getElementById('lb-wait-msg').style.display = 'none';
+            // 管理者顯示 admin 而不是 guest
+            document.getElementById('label-user-name').innerText = "ADMIN";
         }
 
         const loginGrid = document.getElementById('login-grid');
@@ -223,7 +234,7 @@
         if(myName) { db.ref(`users/${myName}`).remove(); db.ref(`assignments/${myName}`).remove(); }
         localStorage.removeItem('race_user');
         myName = "";
-        document.getElementById('label-user-name').innerText = "GUEST";
+        if(!isAdmin) document.getElementById('label-user-name').innerText = "GUEST";
         location.reload();
     }
 
@@ -236,7 +247,7 @@
             });
             if (myName && u[myName]) {
                 switchPage('page-setup');
-                document.getElementById('label-user-name').innerText = myName;
+                if(!isAdmin) document.getElementById('label-user-name').innerText = myName;
                 document.getElementById('btn-back').style.display = 'block';
             } else {
                 switchPage('page-login');
@@ -267,6 +278,8 @@
                 runRace(s);
             } else {
                 if (isAdmin) document.getElementById('admin-start-btn').style.display = 'block';
+                // 當狀態變回 idle，確保所有人隱藏排行榜並刷新 UI
+                document.getElementById('leaderboard-overlay').style.display = 'none';
                 if (document.getElementById('page-track').classList.contains('active')) location.reload();
             }
         });
@@ -304,13 +317,17 @@
                 }
                 raceData[name] = { hIdx, events };
             });
-            db.ref('gameState').set({ status: 'racing', startTime: Date.now() + serverOffset + 3000, raceData });
+            // 倒數 3 秒起跑
+            db.ref('gameState').set({ status: 'racing', startTime: Date.now() + serverOffset + 4000, raceData });
         });
     }
 
-    function adminReset() { db.ref().set({ gameState: { status: 'idle' } }); }
+    function adminReset() { 
+        // 點擊後立即隱藏本地排行榜，並重置資料庫
+        document.getElementById('leaderboard-overlay').style.display = 'none';
+        db.ref('gameState').set({ status: 'idle' }); 
+    }
 
-    // --- 恢復的核心賽跑邏輯 ---
     function runRace(state) {
         switchPage('page-track');
         const renderArea = document.getElementById('lanes-render-area');
@@ -339,28 +356,42 @@
         const finishLineX = renderArea.offsetWidth - 140;
         const runners = players.map(([name, data]) => ({
             name, stats: horseLibrary[data.hIdx].stats, events: data.events,
-            progress: 0, stamina: 100, isRecovering: false, finished: false
+            progress: 0, stamina: 100, isRecovering: false, recoveryEndTime: 0, finished: false
         }));
 
         let finishCount = 0;
         let lastT = Date.now() + serverOffset;
+        const countdownEl = document.getElementById('countdown-overlay');
 
         function frame() {
             const now = Date.now() + serverOffset;
             const dt = (now - lastT) / 1000; lastT = now;
             const elapsed = (now - state.startTime) / 1000;
-            if (elapsed < 0) { requestAnimationFrame(frame); return; }
+
+            // --- 倒數計時邏輯 ---
+            if (elapsed < 0) {
+                countdownEl.style.display = 'flex';
+                const count = Math.ceil(Math.abs(elapsed));
+                countdownEl.innerText = count > 3 ? "READY" : count;
+                requestAnimationFrame(frame); 
+                return; 
+            } else if (elapsed >= 0 && elapsed < 1) {
+                countdownEl.innerText = "GO!";
+                setTimeout(() => countdownEl.style.display = 'none', 1000);
+            }
 
             runners.forEach((r, i) => {
                 if (r.finished) return;
                 const bub = document.getElementById(`bubble-${i}`);
                 const stamFill = document.getElementById(`stam-${i}`);
 
+                // --- 恢復回血處罰邏輯 ---
                 if (r.isRecovering) {
                     bub.className = "speech-bubble bubble-danger";
                     bub.innerText = "😵 爆肝中...";
                     if (elapsed >= r.recoveryEndTime) {
-                        r.isRecovering = false; r.stamina = 100;
+                        r.isRecovering = false; 
+                        r.stamina = 100;
                         bub.innerText = ""; bub.className = "";
                     }
                 } else {
@@ -387,11 +418,13 @@
                     r.stamina = Math.max(0, r.stamina - drain * dt);
                     if(stamFill) stamFill.style.width = r.stamina + "%";
 
+                    // 體力歸零進入懲罰
                     if (r.stamina <= 0) {
                         r.isRecovering = true;
-                        r.recoveryEndTime = elapsed + 5;
+                        r.recoveryEndTime = elapsed + 5; // 懲罰 5 秒
                     }
                 }
+                
                 document.getElementById(`pawn-${i}`).style.left = (r.progress * finishLineX) + "px";
                 
                 if (r.progress >= 1) { 
