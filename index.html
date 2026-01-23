@@ -127,7 +127,7 @@
 
 <div id="page-setup" class="page">
     <div style="text-align:center; padding: 25px 15px 10px;">
-        <h2 style="color:var(--gold); margin:0; font-size:24px;">🐎 請選擇您的參賽馬匹</h2>
+        <h2 style="color:var(--gold); margin:0; font-size:24px;">🐎 請選擇您的參賽戰馬</h2>
         <div style="font-size:12px; color:#aaa; margin-top:12px; line-height:1.6; background:#1a1a1a; padding:12px; border-radius:10px; text-align:left; border:1px solid #333;">
             <b style="color:var(--gold);">📊 屬性影響說明：</b><br>
             • <b>速度：</b>基礎移動速度。速度越快，體力消耗也越快。<br>
@@ -153,7 +153,7 @@
 
 <div id="leaderboard-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:10000; display:none; align-items:center; justify-content:center;">
     <div style="background:white; color:black; width:85%; border-radius:20px; padding:30px; text-align:center;">
-        <h2 style="color:var(--danger);">🏆 排行榜 </h2>
+        <h2 style="color:var(--danger);">🏆 排行榜 🏆 </h2>
         <div id="rankings-list" style="margin:20px 0; font-weight:bold; text-align: left;"></div>
         <button class="btn-ui" onclick="adminReset()" style="background:#111; color:white; width:100%; padding:15px; display:none;" id="lb-reset-btn">下一輪比賽</button>
     </div>
@@ -387,8 +387,9 @@
         document.getElementById('rankings-list').innerHTML = sorted.map((r, i) => `<div style="display:flex; justify-content:space-between; padding:12px; border-bottom:1px solid #eee;"><span>${rankEmojis[i] || ""} #${i+1} ${r.name}</span><span style="color:var(--primary)">${getPrize(i+1)}</span></div>`).join('');
     }
 
-    function getPrize(r) { return r === 1 ? "$2500" : (r <= 5 ? "$1000禮券" : {6:"$500", 7:"$400", 8:"$300", 9:"$200", 10:"$100"}[r] || "-"); }
+    function getPrize(r) { return r === 1 ? "現金 $2500" : (r <= 5 ? "$1000禮券" : {6:"現金 $500", 7:"現金 $400", 8:"現金 $300", 9:"現金 $200", 10:"現金 $100"}[r] || "-"); }
     init();
 </script>
 </body>
 </html>
+
