@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 AIOT 尾牙賽馬 - PO 完整視覺版</title>
+    <title>2026 AIOT 尾牙賽馬 - PO 同步優化版</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
@@ -34,7 +34,7 @@
         }
         .name-card.taken { opacity: 0.3; filter: grayscale(1); pointer-events: none; }
 
-        /* 選馬卡片 - 4欄能力值 */
+        /* 選馬卡片 */
         .horse-list { padding: 15px; padding-bottom: 120px; }
         .horse-card { 
             background: #1a1a1a; border: 2px solid #333; border-radius: 16px; padding: 15px; 
@@ -50,7 +50,7 @@
         .stat-fill { height: 100%; background: var(--gold); }
         .horse-desc { font-size: 12px; color: #bbb; font-style: italic; border-top: 1px solid #333; padding-top: 8px; }
 
-        /* 比賽跑道視覺 - 強制分層 */
+        /* 比賽跑道 */
         #page-track { background: #111; }
         .track-bg { height: 100%; position: relative; background: #151515; }
         #lanes-render-area { display: flex; flex-direction: column; height: 100%; }
@@ -138,7 +138,7 @@
 
 <div class="admin-persistent-ctrl" id="admin-ctrl">
     <button class="btn-ui" id="admin-start-btn" onclick="adminStart()" style="background:var(--success); color:black; padding:15px 30px; font-size:18px;">🏁 開始比賽</button>
-    <button class="btn-ui" onclick="adminReset()" style="background:var(--danger); color:white; padding:10px 20px;">🔄 重置全場</button>
+    <button class="btn-ui" id="admin-reset-btn" onclick="adminReset()" style="background:var(--danger); color:white; padding:10px 20px;">🔄 重置全場</button>
 </div>
 
 <div id="leaderboard-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:10000; display:none; align-items:center; justify-content:center;">
@@ -164,21 +164,21 @@
     const db = firebase.database();
 
     const horseLibrary = [
-        { id: 0, trait: "薪水小偷", emoji: "🦄", stats: {spd: 60, sta: 95, burst: 40, lck: 70}, desc: "擅長在主管視線外緩步前進，體力深不可測。" },
-        { id: 1, trait: "下班戰神", emoji: "🦓", stats: {spd: 55, sta: 65, burst: 95, lck: 60}, desc: "一旦夕陽西下，體力再低也能爆發衝刺。" },
-        { id: 2, trait: "爆肝王", emoji: "🐎", stats: {spd: 95, sta: 25, burst: 85, lck: 30}, desc: "起步瞬間即巔峰，但爆肝倒數是他的日常。" },
-        { id: 3, trait: "會議發言機", emoji: "🎠", stats: {spd: 75, sta: 60, burst: 60, lck: 80}, desc: "節奏感極強，以穩定的高語速壓制全場。" },
-        { id: 4, trait: "咖啡中毒者", emoji: "☕", stats: {spd: 80, sta: 45, burst: 75, lck: 55}, desc: "依賴咖啡因提速，沒咖啡時體力掉超快。" },
-        { id: 5, trait: "甩鍋專業戶", emoji: "🥘", stats: {spd: 45, sta: 85, burst: 30, lck: 99}, desc: "擁有神級閃避，幾乎不會滑倒，運氣點滿。" },
-        { id: 6, trait: "加班邊緣人", emoji: "👤", stats: {spd: 55, sta: 90, burst: 50, lck: 65}, desc: "雖然沒存在感，但體力驚人且跑得異常穩。" },
-        { id: 7, trait: "截稿衝刺", emoji: "🚀", stats: {spd: 40, sta: 70, burst: 99, lck: 40}, desc: "平時都在混，最後關頭衝刺力量無人能及。" },
-        { id: 8, trait: "出一張嘴", emoji: "👄", stats: {spd: 85, sta: 50, burst: 70, lck: 65}, desc: "用氣勢驅動四肢，爆發力與速度兼具的型男。" },
-        { id: 9, trait: "中庸之道", emoji: "☯️", stats: {spd: 70, sta: 75, burst: 65, lck: 70}, desc: "不求最快，但體力與運氣讓他始終在第一梯隊。" },
-        { id: 10, trait: "PM 通靈師", emoji: "🔮", stats: {spd: 50, sta: 50, burst: 40, lck: 100}, desc: "能預知 Bug 發生位置，靠著神級直覺避開障礙。" },
-        { id: 11, trait: "簡報大師", emoji: "📊", stats: {spd: 90, sta: 30, burst: 90, lck: 40}, desc: "畫面很華麗，但續航力極低，沒講完就斷電。" },
-        { id: 12, trait: "Debug 錦鯉", emoji: "🐟", stats: {spd: 65, sta: 65, burst: 65, lck: 95}, desc: "只要他在，程式碼自動修復，運氣就是一切。" },
-        { id: 13, trait: "飲水機守門員", emoji: "🚰", stats: {spd: 40, sta: 100, burst: 20, lck: 80}, desc: "每天準時報到，體力全場最硬，慢慢磨到終點。" },
-        { id: 14, trait: "Slack 潛水員", emoji: "⚓", stats: {spd: 75, sta: 75, burst: 50, lck: 50}, desc: "沒事不回訊，一旦回訊就是已經到終點了。" }
+        { id: 0, trait: "薪水小偷", stats: {spd: 60, sta: 95, burst: 40, lck: 70}, desc: "擅長在主管視線外緩步前進，體力深不可測。" },
+        { id: 1, trait: "下班戰神", stats: {spd: 55, sta: 65, burst: 95, lck: 60}, desc: "一旦夕陽西下，體力再低也能爆發衝刺。" },
+        { id: 2, trait: "爆肝王", stats: {spd: 95, sta: 25, burst: 85, lck: 30}, desc: "起步瞬間即巔峰，但爆肝倒數是他的日常。" },
+        { id: 3, trait: "會議發言機", stats: {spd: 75, sta: 60, burst: 60, lck: 80}, desc: "節奏感極強，以穩定的高語速壓制全場。" },
+        { id: 4, trait: "咖啡中毒者", stats: {spd: 80, sta: 45, burst: 75, lck: 55}, desc: "依賴咖啡因提速，沒咖啡時體力掉超快。" },
+        { id: 5, trait: "甩鍋專業戶", stats: {spd: 45, sta: 85, burst: 30, lck: 99}, desc: "擁有神級閃避，幾乎不會滑倒，運氣點滿。" },
+        { id: 6, trait: "加班邊緣人", stats: {spd: 55, sta: 90, burst: 50, lck: 65}, desc: "雖然沒存在感，但體力驚人且跑得異常穩。" },
+        { id: 7, trait: "截稿衝刺", stats: {spd: 40, sta: 70, burst: 99, lck: 40}, desc: "平時都在混，最後關頭衝刺力量無人能及。" },
+        { id: 8, trait: "出一張嘴", stats: {spd: 85, sta: 50, burst: 70, lck: 65}, desc: "用氣勢驅動四肢，爆發力與速度兼具的型男。" },
+        { id: 9, trait: "中庸之道", stats: {spd: 70, sta: 75, burst: 65, lck: 70}, desc: "不求最快，但體力與運氣讓他始終在第一梯隊。" },
+        { id: 10, trait: "PM 通靈師", stats: {spd: 50, sta: 50, burst: 40, lck: 100}, desc: "能預知 Bug 發生位置，靠著神級直覺避開障礙。" },
+        { id: 11, trait: "簡報大師", stats: {spd: 90, sta: 30, burst: 90, lck: 40}, desc: "畫面很華麗，但續航力極低，沒講完就斷電。" },
+        { id: 12, trait: "Debug 錦鯉", stats: {spd: 65, sta: 65, burst: 65, lck: 95}, desc: "只要他在，程式碼自動修復，運氣就是一切。" },
+        { id: 13, trait: "飲水機守門員", stats: {spd: 40, sta: 100, burst: 20, lck: 80}, desc: "每天準時報到，體力全場最硬，慢慢磨到終點。" },
+        { id: 14, trait: "Slack 潛水員", stats: {spd: 75, sta: 75, burst: 50, lck: 50}, desc: "沒事不回訊，一旦回訊就是已經到終點了。" }
     ];
 
     const names = ["JULIA", "MOLLY", "DON", "豪哥", "Gimme", "Erick", "韋志", "JULI", "JASON", "KRIS"];
@@ -211,7 +211,7 @@
             d.innerHTML = `
                 <div class="owner-badge" id="owner-${i}" style="display:none;"></div>
                 <div style="display:flex; align-items:center; gap:10px;">
-                    <span style="font-size:30px;">${h.emoji}</span>
+                    <span style="font-size:30px;">🐎</span>
                     <div style="font-weight:bold; color:var(--gold); font-size:18px;">${h.trait}</div>
                 </div>
                 <div class="stat-grid">
@@ -258,8 +258,15 @@
 
         db.ref('gameState').on('value', snap => {
             const s = snap.val();
-            if (s && s.status === 'racing') runRace(s);
-            else { document.getElementById('leaderboard-overlay').style.display = 'none'; if (document.getElementById('page-track').classList.contains('active')) location.reload(); }
+            if (s && s.status === 'racing') {
+                // 管理員介面切換：隱藏開始，只留重置
+                if(isAdmin) document.getElementById('admin-start-btn').style.display = 'none';
+                runRace(s);
+            } else {
+                if(isAdmin) document.getElementById('admin-start-btn').style.display = 'block';
+                document.getElementById('leaderboard-overlay').style.display = 'none';
+                if (document.getElementById('page-track').classList.contains('active')) location.reload();
+            }
         });
     }
 
@@ -285,6 +292,7 @@
                 for(let j=0; j<3; j++) events.push({ t: 8 + (j * 8) + Math.random() * 5, type: (Math.random()*100 < h.stats.lck) ? 'burst' : 'slip' });
                 raceData[name] = { hIdx, events };
             });
+            // 寫入 startTime 同步所有玩家
             db.ref('gameState').set({ status: 'racing', startTime: Date.now() + serverOffset + 4000, raceData });
         });
     }
@@ -299,14 +307,12 @@
         const renderArea = document.getElementById('lanes-render-area'); renderArea.innerHTML = "";
         const players = Object.entries(state.raceData);
         
-        // 渲染跑道
         players.forEach(([name, data], idx) => {
-            const horse = horseLibrary[data.hIdx];
             const div = document.createElement('div'); div.className = 'lane';
             div.innerHTML = `
                 <div class="horse-pawn" id="pawn-${idx}">
                     <div id="bubble-${idx}"></div>
-                    <div class="horse-visual" id="vis-${idx}">${horse.emoji}</div>
+                    <div class="horse-visual" id="vis-${idx}">🐎</div>
                     <div style="margin-left:10px;">
                         <div style="font-size:10px; font-weight:bold;">${name}</div>
                         <div class="stamina-container"><div class="stamina-fill" id="stam-${idx}" style="width:100%"></div></div>
@@ -319,9 +325,12 @@
         const finishLineX = renderArea.offsetWidth - 140;
         const runners = players.map(([name, data]) => ({ name, stats: horseLibrary[data.hIdx].stats, events: data.events, progress: 0, stamina: 100, isRecovering: false, recoveryEndTime: 0, finished: false }));
         let lastT = Date.now() + serverOffset;
+        let isRacing = true;
 
         function frame() {
+            if (!isRacing) return;
             const now = Date.now() + serverOffset; const dt = (now - lastT) / 1000; lastT = now; const elapsed = (now - state.startTime) / 1000;
+            
             if (elapsed < 0) { const count = Math.ceil(Math.abs(elapsed)); document.getElementById('countdown-overlay').style.display = 'flex'; document.getElementById('countdown-overlay').innerText = count > 3 ? "READY" : count; requestAnimationFrame(frame); return; }
             document.getElementById('countdown-overlay').style.display = 'none';
 
@@ -330,7 +339,6 @@
                 const bub = document.getElementById(`bubble-${i}`);
                 const stamFill = document.getElementById(`stam-${i}`);
                 const vis = document.getElementById(`vis-${i}`);
-
                 vis.className = "horse-visual";
 
                 if (r.isRecovering) {
@@ -352,10 +360,13 @@
                     r.progress += spd * dt; r.stamina = Math.max(0, r.stamina - drain * dt); if(stamFill) stamFill.style.width = r.stamina + "%";
                     if (r.stamina <= 0) { r.isRecovering = true; r.recoveryEndTime = elapsed + 5; }
                 }
-                document.getElementById(`pawn-${i}`).style.left = (r.progress * finishLineX) + "px";
+                const pawn = document.getElementById(`pawn-${i}`);
+                if(pawn) pawn.style.left = (r.progress * finishLineX) + "px";
                 if (r.progress >= 1) { r.finished = true; r.finishTime = elapsed; bub.className = "finish-emoji"; bub.innerText = rankEmojis[runners.filter(r=>r.finished).length - 1] || "🏁"; }
             });
-            if (runners.every(r => r.finished)) setTimeout(() => finishGame(runners), 1000); else requestAnimationFrame(frame);
+
+            if (runners.every(r => r.finished)) { isRacing = false; setTimeout(() => finishGame(runners), 1000); }
+            else { requestAnimationFrame(frame); }
         }
         requestAnimationFrame(frame);
     }
