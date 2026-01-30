@@ -1209,14 +1209,14 @@
                     if (elapsed >= r.recoveryEndTime) { r.isRecovering = false; r.stamina = 100; bub.innerText = ""; bub.className = ""; }
                 } else {
                     let spd = (r.stats.spd / 100) * 0.035; 
-                    let drain = (1.5 - r.stats.sta/100) * 0.8; // 降低基礎消耗速度
+                    let drain = (1.5 - r.stats.sta/100) * 2.5; // 提高基礎消耗速度
                     let eventActive = false;
                     r.events.forEach(ev => {
                         if (elapsed >= ev.t && elapsed <= ev.t + 1.5) {
                             eventActive = true;
                             if (ev.type === 'burst') { 
                                 spd *= (1.5 + r.stats.burst/100); 
-                                drain *= 3; // 衝刺時體力消耗加倍
+                                drain *= 4; // 衝刺時體力消耗4倍
                                 bub.className = "speech-bubble"; 
                                 bub.innerText = "🔥 衝刺！"; 
                                 vis.classList.add('effect-sprint'); 
