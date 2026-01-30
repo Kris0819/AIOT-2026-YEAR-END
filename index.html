@@ -1138,8 +1138,11 @@
     }
 
     function adminReset() { 
-        db.ref('users').remove(); db.ref('assignments').remove();
+        db.ref('users').remove(); 
+        db.ref('assignments').remove();
         db.ref('gameState').set({ status: 'idle' }); 
+        // 同時清除排行榜overlay
+        document.getElementById('leaderboard-overlay').style.display = 'none';
     }
 
     function runRace(state) {
@@ -1209,14 +1212,14 @@
                     if (elapsed >= r.recoveryEndTime) { r.isRecovering = false; r.stamina = 100; bub.innerText = ""; bub.className = ""; }
                 } else {
                     let spd = (r.stats.spd / 100) * 0.035; 
-                    let drain = (1.5 - r.stats.sta/100) * 2.5; // 提高基礎消耗速度
+                    let drain = (1.5 - r.stats.sta/100) * 5; // 大幅提高基礎消耗速度
                     let eventActive = false;
                     r.events.forEach(ev => {
                         if (elapsed >= ev.t && elapsed <= ev.t + 1.5) {
                             eventActive = true;
                             if (ev.type === 'burst') { 
                                 spd *= (1.5 + r.stats.burst/100); 
-                                drain *= 4; // 衝刺時體力消耗4倍
+                                drain *= 6; // 衝刺時體力消耗6倍
                                 bub.className = "speech-bubble"; 
                                 bub.innerText = "🔥 衝刺！"; 
                                 vis.classList.add('effect-sprint'); 
@@ -1240,10 +1243,38 @@
                 }
                 const pawn = document.getElementById(`pawn-${i}`);
                 if(pawn) pawn.style.left = (r.progress * finishLineX) + "px";
-                if (r.progress >= 1) { r.finished = true; r.finishTime = elapsed; bub.className = "finish-emoji"; bub.innerText = rankEmojis[runners.filter(r=>r.finished).length - 1] || "🏁"; }
+                if (r.progress >= 1 && !r.finished) { 
+                    r.finished = true; 
+                    r.finishTime = elapsed;
+                    // 立即將完賽時間寫入Firebase
+                    db.ref(`gameState/results/${r.name}`).set({
+                        finishTime: r.finishTime,
+                        timestamp: Date.now() + serverOffset
+                    });
+                    bub.className = "finish-emoji"; 
+                    bub.innerText = rankEmojis[runners.filter(r=>r.finished).length - 1] || "🏁"; 
+                }
             });
 
-            if (runners.every(r => r.finished)) { isRacing = false; setTimeout(() => finishGame(runners), 1000); }
+            if (runners.every(r => r.finished)) { 
+                isRacing = false; 
+                // 等待所有結果寫入Firebase後再顯示排行榜
+                setTimeout(() => {
+                    db.ref('gameState/results').once('value', snap => {
+                        const fbResults = snap.val();
+                        if (fbResults) {
+                            // 使用Firebase的結果來排序
+                            const sortedResults = Object.entries(fbResults)
+                                .map(([name, data]) => ({ name, finishTime: data.finishTime }))
+                                .sort((a, b) => a.finishTime - b.finishTime);
+                            finishGame(sortedResults);
+                        } else {
+                            // 後備方案：使用本地結果
+                            finishGame(runners);
+                        }
+                    });
+                }, 500);
+            }
             else { requestAnimationFrame(frame); }
         }
         requestAnimationFrame(frame);
@@ -1253,6 +1284,11 @@
         const sorted = [...results].sort((a,b) => a.finishTime - b.finishTime);
         document.getElementById('leaderboard-overlay').style.display = 'flex';
         document.getElementById('rankings-list').innerHTML = sorted.map((r, i) => `<div style="display:flex; justify-content:space-between; padding:12px;"><span>${rankEmojis[i] || ""} #${i+1} ${r.name}</span><span style="color:var(--pixel-red); font-weight:bold;">${getPrize(i+1)}</span></div>`).join('');
+        
+        // 播放完賽音效
+        const finishSfx = document.getElementById('finish-sfx');
+        finishSfx.volume = 0.6;
+        finishSfx.play().catch(e => console.log('完賽音效播放失敗'));
     }
 
     function getPrize(r) { return r === 1 ? "現金 $2500" : (r <= 5 ? "新光禮卷 $1000 " : {6:"現金 $500", 7:"現金 $400", 8:"現金 $300", 9:"現金 $200", 10:"現金 $100"}[r] || "-"); }
