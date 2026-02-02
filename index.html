@@ -40,7 +40,6 @@
             font-size: 11px;
         }
 
-        /* 像素邊框效果 */
         .pixel-border {
             box-shadow: 
                 0 -2px 0 var(--pixel-shadow),
@@ -90,7 +89,6 @@
             box-shadow: none;
         }
 
-        /* Header 像素風格 */
         .header-bar { 
             background: 
                 repeating-linear-gradient(
@@ -145,7 +143,6 @@
         }
         .page.active { display: flex; }
         
-        /* 登入網格 - 像素卡片 */
         .login-grid { 
             display: grid; 
             grid-template-columns: repeat(2, 1fr); 
@@ -212,7 +209,6 @@
             color: var(--pixel-red);
         }
 
-        /* 選馬卡片 - 像素RPG風格 */
         .horse-list { 
             padding: 15px; 
             padding-bottom: 120px;
@@ -300,7 +296,6 @@
             box-shadow: 2px 2px 0 var(--pixel-shadow);
         }
 
-        /* 屬性條 - 像素RPG風格 */
         .stat-grid { 
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -354,7 +349,6 @@
             margin-top: 10px;
         }
 
-        /* 比賽跑道 - 像素遊戲風格 */
         #page-track { 
             background: 
                 linear-gradient(to bottom,
@@ -385,7 +379,6 @@
                 );
         }
 
-        /* 雲朵背景 */
         .track-bg::before {
             content: '';
             position: absolute;
@@ -502,7 +495,6 @@
             50% { transform: scaleX(-1) translateY(-4px); }
         }
         
-        /* 特效 */
         .effect-sprint { 
             animation: pixel-sprint 0.15s steps(2) infinite !important;
             filter: 
@@ -541,7 +533,6 @@
             100% { transform: scaleX(-1) rotate(0deg) translateX(0); }
         }
 
-        /* 對話框 - 像素RPG風格 */
         .speech-bubble {
             position: absolute;
             top: -60px;
@@ -602,7 +593,6 @@
             border-top-color: var(--pixel-blue);
         }
 
-        /* 體力條 - 像素風格 */
         .stamina-container { 
             width: 60px;
             height: 8px;
@@ -623,13 +613,12 @@
                     #55ff99 2px,
                     #55ff99 4px
                 );
-            transition: width 0.1s linear;
+            transition: width 0.05s linear;
             box-shadow: 
                 inset 0 -1px 0 rgba(0,0,0,0.3),
                 inset 0 1px 0 rgba(255,255,255,0.3);
         }
 
-        /* 倒數計時 - 像素風格 */
         #countdown-overlay {
             position: fixed;
             inset: 0;
@@ -656,7 +645,6 @@
             50% { transform: scale(1.1); }
         }
 
-        /* 管理員面板 - 像素風格 */
         .admin-monitor-box { 
             background: 
                 linear-gradient(to bottom,
@@ -704,7 +692,6 @@
             gap: 10px;
         }
 
-        /* 排行榜 - 像素風格 */
         #leaderboard-overlay {
             position: fixed;
             inset: 0;
@@ -797,7 +784,6 @@
                 );
         }
 
-        /* 標題裝飾 */
         .pixel-title {
             position: relative;
             display: inline-block;
@@ -829,7 +815,6 @@
             }
         }
 
-        /* 說明文字框 */
         .info-box {
             background: 
                 linear-gradient(to bottom,
@@ -852,7 +837,6 @@
             text-shadow: 1px 1px 0 var(--pixel-shadow);
         }
 
-        /* 捲軸效果 */
         ::-webkit-scrollbar {
             width: 12px;
         }
@@ -872,7 +856,6 @@
             background: var(--pixel-gold);
         }
 
-        /* 像素星星裝飾 */
         @keyframes twinkle {
             0%, 100% { opacity: 0.3; }
             50% { opacity: 1; }
@@ -987,7 +970,7 @@
         { id: 0, trait: "薪水小偷", stats: {spd: 60, sta: 95, burst: 40, lck: 70}, desc: "擅長在主管視線外緩步前進，體力深不可測。" },
         { id: 1, trait: "下班戰神", stats: {spd: 55, sta: 65, burst: 95, lck: 60}, desc: "一旦夕陽西下，體力再低也能爆發衝刺。" },
         { id: 2, trait: "爆肝王", stats: {spd: 95, sta: 25, burst: 85, lck: 30}, desc: "起步瞬間即巔峰，但爆肝倒數是他的日常。" },
-        { id: 3, trait: "會議戰鬥機", stats: {spd: 75, sta: 60, burst: 60, lck: 80}, desc: "節奏感極強，以穩定的高語速壓制全場。" },
+        { id: 3, trait: "會議戰鬥機", stats: {spd: 75, sta: 60, burst: 60, lck: 80}, desc: "節奏感極強,以穩定的高語速壓制全場。" },
         { id: 4, trait: "咖啡中毒者", stats: {spd: 80, sta: 45, burst: 75, lck: 55}, desc: "依賴咖啡因提速，沒咖啡時體力掉超快。" },
         { id: 5, trait: "甩鍋專業戶", stats: {spd: 45, sta: 85, burst: 30, lck: 99}, desc: "擁有神級閃避，幾乎不會滑倒，運氣點滿。" },
         { id: 6, trait: "加班邊緣人", stats: {spd: 55, sta: 90, burst: 50, lck: 65}, desc: "雖然沒存在感，但體力驚人且跑得異常穩。" },
@@ -1131,22 +1114,17 @@
     function adminReset() { 
         db.ref('users').remove(); 
         db.ref('assignments').remove();
-        db.ref('gameState').set({ status: 'idle' }); 
-        // 同時清除排行榜overlay
-        document.getElementById('leaderboard-overlay').style.display = 'none';
-        // 重新載入頁面以確保乾淨狀態
+        db.ref('gameState').set({ status: 'idle' });
         setTimeout(() => location.reload(), 300);
     }
 
     function runRace(state) {
         switchPage('page-track');
-        const renderArea = document.getElementById('lanes-render-area'); 
-        renderArea.innerHTML = "";
+        const renderArea = document.getElementById('lanes-render-area'); renderArea.innerHTML = "";
         const players = Object.entries(state.raceData);
         
         players.forEach(([name, data], idx) => {
-            const div = document.createElement('div'); 
-            div.className = 'lane';
+            const div = document.createElement('div'); div.className = 'lane';
             div.innerHTML = `
                 <div class="horse-pawn" id="pawn-${idx}">
                     <div id="bubble-${idx}"></div>
@@ -1161,32 +1139,9 @@
         });
 
         const finishLineX = renderArea.offsetWidth - 140;
-
-        if (isAdmin) {
-            // Admin模式：計算並廣播遊戲狀態
-            runRaceAsAdmin(state, players, finishLineX);
-        } else {
-            // 玩家模式：接收並顯示admin的遊戲狀態
-            runRaceAsPlayer(state, players, finishLineX);
-        }
-    }
-
-    // Admin專用：執行比賽邏輯並廣播狀態
-    function runRaceAsAdmin(state, players, finishLineX) {
-        const runners = players.map(([name, data]) => ({ 
-            name, 
-            stats: horseLibrary[data.hIdx].stats, 
-            events: data.events, 
-            progress: 0, 
-            stamina: 100, 
-            isRecovering: false, 
-            recoveryEndTime: 0, 
-            finished: false 
-        }));
-        
+        const runners = players.map(([name, data]) => ({ name, stats: horseLibrary[data.hIdx].stats, events: data.events, progress: 0, stamina: 100, isRecovering: false, recoveryEndTime: 0, finished: false }));
         let lastT = Date.now() + serverOffset;
         let isRacing = true;
-        let lastBroadcast = 0;
 
         function frame() {
             if (!isRacing) return;
@@ -1198,15 +1153,11 @@
             if (elapsed < 0) { 
                 const count = Math.ceil(Math.abs(elapsed)); 
                 document.getElementById('countdown-overlay').style.display = 'flex'; 
-                const countText = count > 3 ? "READY" : count;
-                document.getElementById('countdown-overlay').innerText = countText;
+                document.getElementById('countdown-overlay').innerText = count > 3 ? "READY" : count; 
                 requestAnimationFrame(frame); 
                 return; 
             }
-            
-            if (document.getElementById('countdown-overlay').style.display !== 'none') {
-                document.getElementById('countdown-overlay').style.display = 'none';
-            }
+            document.getElementById('countdown-overlay').style.display = 'none';
 
             runners.forEach((r, i) => {
                 if (r.finished) return;
@@ -1262,158 +1213,19 @@
                 }
             });
 
-            // 每100ms廣播一次狀態給所有玩家
-            if (now - lastBroadcast > 100) {
-                lastBroadcast = now;
-                const gameStateUpdate = {
-                    elapsed: elapsed,
-                    runners: runners.map((r, idx) => {
-                        // 檢查當前是否有事件觸發
-                        let currentEvent = null;
-                        r.events.forEach(ev => {
-                            if (elapsed >= ev.t && elapsed <= ev.t + 1.5) {
-                                currentEvent = ev.type;
-                            }
-                        });
-                        
-                        return {
-                            name: r.name,
-                            progress: r.progress,
-                            stamina: r.stamina,
-                            isRecovering: r.isRecovering,
-                            recoveryEndTime: r.recoveryEndTime,
-                            finished: r.finished,
-                            finishTime: r.finishTime,
-                            currentEvent: currentEvent
-                        };
-                    })
-                };
-                db.ref('gameState/live').set(gameStateUpdate);
-            }
-
             if (runners.every(r => r.finished)) { 
                 isRacing = false; 
-                // 廣播最終結果
-                const finalResults = runners.map(r => ({
-                    name: r.name,
-                    finishTime: r.finishTime
-                })).sort((a, b) => a.finishTime - b.finishTime);
-                
-                db.ref('gameState/finalResults').set(finalResults);
-                setTimeout(() => finishGame(finalResults), 500);
-            } else { 
-                requestAnimationFrame(frame); 
+                setTimeout(() => finishGame(runners), 1000); 
             }
+            else { requestAnimationFrame(frame); }
         }
         requestAnimationFrame(frame);
     }
 
-    // 玩家專用：接收admin廣播的狀態並顯示
-    function runRaceAsPlayer(state, players, finishLineX) {
-        let countdownShown = false;
-        let hasStarted = false;
-        
-        // 監聽admin廣播的即時狀態
-        const liveRef = db.ref('gameState/live');
-        liveRef.on('value', snap => {
-            const liveState = snap.val();
-            if (!liveState) {
-                // 如果還沒有live數據，顯示等待中
-                if (!hasStarted) {
-                    document.getElementById('countdown-overlay').style.display = 'flex';
-                    document.getElementById('countdown-overlay').innerText = 'READY';
-                }
-                return;
-            }
-
-            hasStarted = true;
-            const elapsed = liveState.elapsed;
-
-            // 處理倒數計時
-            if (elapsed < 0) {
-                const count = Math.ceil(Math.abs(elapsed));
-                document.getElementById('countdown-overlay').style.display = 'flex';
-                const countText = count > 3 ? "READY" : count;
-                document.getElementById('countdown-overlay').innerText = countText;
-                countdownShown = true;
-                return;
-            }
-
-            if (countdownShown || document.getElementById('countdown-overlay').style.display !== 'none') {
-                document.getElementById('countdown-overlay').style.display = 'none';
-                countdownShown = false;
-            }
-
-            // 更新每個runner的狀態
-            if (!liveState.runners || !Array.isArray(liveState.runners)) return;
-            
-            liveState.runners.forEach((runner, i) => {
-                const pawn = document.getElementById(`pawn-${i}`);
-                const stamFill = document.getElementById(`stam-${i}`);
-                const vis = document.getElementById(`vis-${i}`);
-                const bub = document.getElementById(`bubble-${i}`);
-
-                if (!pawn || !stamFill || !vis || !bub) return;
-
-                // 更新位置
-                pawn.style.left = (runner.progress * finishLineX) + "px";
-                
-                // 更新體力條
-                stamFill.style.width = runner.stamina + "%";
-
-                // 更新視覺效果
-                vis.className = "horse-visual";
-                
-                if (runner.finished) {
-                    bub.className = "finish-emoji";
-                    const finishedRunners = liveState.runners.filter(r => r.finished);
-                    const rank = finishedRunners.findIndex(r => r.name === runner.name);
-                    bub.innerText = rankEmojis[rank] || "🏁";
-                } else if (runner.isRecovering) {
-                    vis.classList.add('effect-exhausted');
-                    const elapsed = liveState.elapsed;
-                    const rem = runner.recoveryEndTime - elapsed;
-                    if (rem > 3.5) {
-                        bub.className = "speech-bubble bubble-danger";
-                        bub.innerText = "😵 已爆肝...";
-                    } else {
-                        bub.className = "speech-bubble bubble-recover";
-                        bub.innerText = `🩹 躺平中 ${Math.ceil(rem)}s`;
-                    }
-                } else if (runner.currentEvent) {
-                    // 顯示當前事件的特效
-                    if (runner.currentEvent === 'burst') {
-                        vis.classList.add('effect-sprint');
-                        bub.className = "speech-bubble";
-                        bub.innerText = "🔥 衝刺！";
-                    } else if (runner.currentEvent === 'slip') {
-                        vis.classList.add('effect-slip');
-                        bub.className = "speech-bubble bubble-danger";
-                        bub.innerText = "⛸️ 滑倒！";
-                    }
-                } else {
-                    bub.innerText = "";
-                    bub.className = "";
-                }
-            });
-        });
-
-        // 監聽最終結果
-        const finalRef = db.ref('gameState/finalResults');
-        finalRef.on('value', snap => {
-            const finalResults = snap.val();
-            if (finalResults && finalResults.length > 0) {
-                // 停止監聽即時狀態
-                liveRef.off();
-                finalRef.off();
-                setTimeout(() => finishGame(finalResults), 500);
-            }
-        });
-    }
-
     function finishGame(results) {
+        const sorted = [...results].sort((a,b) => a.finishTime - b.finishTime);
         document.getElementById('leaderboard-overlay').style.display = 'flex';
-        document.getElementById('rankings-list').innerHTML = results.map((r, i) => `<div style="display:flex; justify-content:space-between; padding:12px;"><span>${rankEmojis[i] || ""} #${i+1} ${r.name}</span><span style="color:var(--pixel-red); font-weight:bold;">${getPrize(i+1)}</span></div>`).join('');
+        document.getElementById('rankings-list').innerHTML = sorted.map((r, i) => `<div style="display:flex; justify-content:space-between; padding:12px;"><span>${rankEmojis[i] || ""} #${i+1} ${r.name}</span><span style="color:var(--pixel-red); font-weight:bold;">${getPrize(i+1)}</span></div>`).join('');
     }
 
     function getPrize(r) { return r === 1 ? "現金 $2500" : (r <= 5 ? "新光禮卷 $1000 " : {6:"現金 $500", 7:"現金 $400", 8:"現金 $300", 9:"現金 $200", 10:"現金 $100"}[r] || "-"); }
