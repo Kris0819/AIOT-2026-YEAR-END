@@ -972,100 +972,15 @@
     
     // 全局變量
     let syncListener = null;
-    let adminId = null;
-    let isActiveAdmin = false;
 
     db.ref(".info/serverTimeOffset").on("value", s => serverOffset = s.val());
-
-    // Admin鎖定機制
-    if (isAdmin) {
-        adminId = 'admin_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        
-        // 嘗試獲取admin鎖
-        const acquireAdminLock = () => {
-            db.ref('adminLock').transaction((current) => {
-                if (current === null) {
-                    // 沒有其他admin，獲取鎖
-                    return { id: adminId, timestamp: Date.now() + serverOffset };
-                } else {
-                    // 檢查鎖是否過期（超過10秒視為過期）
-                    const now = Date.now() + serverOffset;
-                    if (now - current.timestamp > 10000) {
-                        // 鎖過期，可以接管
-                        return { id: adminId, timestamp: now };
-                    }
-                    // 有其他活躍的admin
-                    return undefined;
-                }
-            }, (error, committed, snapshot) => {
-                if (error) {
-                    console.error('獲取admin鎖失敗:', error);
-                    alert('無法獲取管理員權限，請稍後再試');
-                } else if (committed) {
-                    if (snapshot.val() && snapshot.val().id === adminId) {
-                        isActiveAdmin = true;
-                        console.log('成功獲取admin權限:', adminId);
-                        // 每5秒更新一次心跳
-                        setInterval(() => {
-                            if (isActiveAdmin) {
-                                db.ref('adminLock').update({ timestamp: Date.now() + serverOffset });
-                            }
-                        }, 5000);
-                    } else {
-                        alert('已有其他管理員在控制比賽，本頁面將以觀察者模式運行');
-                        isActiveAdmin = false;
-                    }
-                } else {
-                    alert('已有其他管理員在控制比賽，本頁面將以觀察者模式運行');
-                    isActiveAdmin = false;
-                }
-            });
-        };
-        
-        acquireAdminLock();
-        
-        // 監聽admin鎖的變化
-        db.ref('adminLock').on('value', snap => {
-            const lock = snap.val();
-            if (lock && lock.id !== adminId) {
-                // 其他admin接管了
-                if (isActiveAdmin) {
-                    isActiveAdmin = false;
-                    alert('管理員權限已被其他頁面接管');
-                    document.getElementById('admin-start-btn').disabled = true;
-                    document.getElementById('admin-reset-btn').disabled = true;
-                }
-            }
-        });
-        
-        // 頁面關閉時釋放鎖
-        window.addEventListener('beforeunload', () => {
-            if (isActiveAdmin) {
-                db.ref('adminLock').remove();
-            }
-        });
-    }
 
     function init() {
         if (isAdmin) {
             document.getElementById('admin-ctrl').style.display = 'flex';
             document.getElementById('admin-login-monitor').style.display = 'block';
             document.getElementById('lb-reset-btn').style.display = 'block';
-            
-            // 等待獲取admin鎖後再顯示狀態
-            setTimeout(() => {
-                if (isActiveAdmin) {
-                    document.getElementById('label-user-name').innerText = "ADMIN (活躍)";
-                    document.getElementById('label-user-name').style.color = "var(--pixel-green)";
-                } else {
-                    document.getElementById('label-user-name').innerText = "ADMIN (觀察)";
-                    document.getElementById('label-user-name').style.color = "var(--pixel-red)";
-                    document.getElementById('admin-start-btn').disabled = true;
-                    document.getElementById('admin-reset-btn').disabled = true;
-                    document.getElementById('admin-start-btn').style.opacity = '0.5';
-                    document.getElementById('admin-reset-btn').style.opacity = '0.5';
-                }
-            }, 500);
+            document.getElementById('label-user-name').innerText = "ADMIN";
         }
         const loginGrid = document.getElementById('login-grid');
         names.forEach(n => {
@@ -1175,11 +1090,6 @@
     }
 
     function adminStart() {
-        if (isAdmin && !isActiveAdmin) {
-            alert('您不是當前的活躍管理員，無法啟動比賽');
-            return;
-        }
-        
         db.ref('assignments').once('value', snap => {
             const players = snap.val(); 
             if (!players) return alert("無人參賽！");
@@ -1202,29 +1112,17 @@
                 db.ref('gameState').set({ 
                     status: 'racing', 
                     startTime: Date.now() + serverOffset + 4000, 
-                    raceData,
-                    adminId: adminId  // 記錄是哪個admin啟動的
+                    raceData
                 });
             });
         });
     }
 
     function adminReset() {
-        if (isAdmin && !isActiveAdmin) {
-            alert('您不是當前的活躍管理員，無法重置比賽');
-            return;
-        }
-        
         // 清理監聽器
         if (syncListener) {
             db.ref('gameState/sync').off('value', syncListener);
             syncListener = null;
-        }
-        
-        // 釋放admin鎖
-        if (isActiveAdmin) {
-            db.ref('adminLock').remove();
-            isActiveAdmin = false;
         }
         
         db.ref('users').remove(); 
@@ -1265,13 +1163,6 @@
     }
 
     function runRaceAsAdmin(state, players, finishLineX) {
-        // 檢查是否為活躍admin
-        if (!isActiveAdmin) {
-            console.log('非活躍admin，切換到玩家模式');
-            runRaceAsPlayer(state, players, finishLineX);
-            return;
-        }
-        
         const runners = players.map(([name, data]) => ({ 
             name, 
             stats: horseLibrary[data.hIdx].stats, 
