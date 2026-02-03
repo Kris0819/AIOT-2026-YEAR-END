@@ -757,6 +757,7 @@ function startAdminGameLoop(startTime, raceData) {
         finished: false,
         finishTime: null,
         finishRank: null,        // ← 完成時的名次（1-based）
+        exhaustedUntil: 0,       // ← 爆肝動畫持續到幾秒（elapsed 單位），期間鎖住 exhausted 狀態
         activeEffect: null
     }));
 
@@ -777,7 +778,12 @@ function startAdminGameLoop(startTime, raceData) {
 
             // --- 恢復中 ---
             if (r.isRecovering) {
-                r.activeEffect = 'recovering';
+                // 爆肝動畫持續期間：鎖住 exhausted，不切到 recovering
+                if (elapsed < r.exhaustedUntil) {
+                    r.activeEffect = 'exhausted';
+                } else {
+                    r.activeEffect = 'recovering';
+                }
                 if (elapsed >= r.recoveryEndTime) {
                     r.isRecovering = false;
                     r.stamina      = 100;
@@ -811,6 +817,7 @@ function startAdminGameLoop(startTime, raceData) {
             if (r.stamina <= 0) {
                 r.isRecovering      = true;
                 r.recoveryEndTime   = elapsed + 5;
+                r.exhaustedUntil    = elapsed + 1.5;   // ← 爆肝動畫先鎖 1.5 秒
                 r.activeEffect      = 'exhausted';
             }
 
