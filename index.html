@@ -283,8 +283,24 @@ function listenFirebase(){
             isRacingNow=false;
             stopListeningSnapshot();
             switchPage('page-setup');
-            db.ref('gameState/finalResults').once('value',rSnap=>{
-                if(rSnap.val()) showFinalLeaderboard(rSnap.val());
+            db.ref('gameState').once('value',gsSnap=>{
+                const gs=gsSnap.val()||{};
+                let final=gs.finalResults;
+                if(!final||!final.length){
+                    const round1=gs.round1Results||[];
+                    const round2=gs.results||[];
+                    if(round1.length&&round2.length){
+                        const r1Map={};round1.forEach(r=>{r1Map[r.name]=r.points||0;});
+                        final=round2.map(r=>({
+                            name:r.name,
+                            round1Points:r1Map[r.name]||0,
+                            round2Points:r.points||0,
+                            totalPoints:(r1Map[r.name]||0)+(r.points||0)
+                        }));
+                        final.sort((a,b)=>b.totalPoints-a.totalPoints);
+                    }
+                }
+                if(final&&final.length) showFinalLeaderboard(final);
             });
         } else {
             // idle
@@ -292,6 +308,7 @@ function listenFirebase(){
             if(isAdmin)document.getElementById('admin-start-btn').style.display='inline-flex';
             document.getElementById('leaderboard-overlay').style.display='none';
             stopListeningSnapshot();
+            switchPage('page-setup');
             // 讀 currentRound 來判斷標題
             db.ref('gameState/currentRound').once('value', rSnap => {
                 const round = rSnap.val() || 1;
@@ -449,9 +466,8 @@ function stopAdminGameLoop(){if(adminLoopTimer){clearInterval(adminLoopTimer);ad
 // 開始第二輪（從榜單按鈕觸發）
 function adminStartRound2(){
     document.getElementById('leaderboard-overlay').style.display='none';
-    // 清掉 assignments 讓大家重新選馬，但保留 users 和 round1Results
-    db.ref('assignments').remove();
-    db.ref('gameState').update({status:'idle'});
+    // 保留 assignments ，第二輪可直接開始
+    db.ref('gameState').update({status:'idle',currentRound:2});
 }
 
 // 重置全場
