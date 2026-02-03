@@ -287,7 +287,7 @@
                 users[n] ? el.classList.add('taken') : el.classList.remove('taken');
             });
             if (myName && users[myName]) {
-                switchPage('page-setup');
+                if (!isRacingNow) switchPage('page-setup'); // 比賽中不切頁，留在跑道上
                 if (!isAdmin) document.getElementById('label-user-name').innerText = myName;
                 document.getElementById('btn-back').style.display = 'block';
             } else {
@@ -316,20 +316,30 @@
             });
         });
 
-        // --- gameState（比賽啟動/狀態） ---
-        db.ref('gameState').on('value', snap => {
-            const s = snap.val();
-            if (s && s.status === 'racing') {
+        // --- gameState/status（只監听 status 字段，避免 snapshot 每次寫入都觸發）---
+        db.ref('gameState/status').on('value', snap => {
+            const status = snap.val();
+            if (status === 'racing') {
+                isRacingNow = true;
                 if (isAdmin) document.getElementById('admin-start-btn').style.display = 'none';
-                // 切到跑道頁並開始監听 snapshot
-                switchPage('page-track');
-                setupTrackLanes(s.raceData);
-                startListeningSnapshot();
-            } else if (s && s.status === 'finished' && s.results) {
-                // 比賽結束，展示榜
-                showLeaderboard(s.results);
+                // 拉一次完整的 gameState 來拿 raceData（僅觸發一次）
+                db.ref('gameState').once('value', fullSnap => {
+                    const s = fullSnap.val();
+                    if (!s || s.status !== 'racing') return;
+                    switchPage('page-track');
+                    setupTrackLanes(s.raceData);
+                    startListeningSnapshot();
+                });
+            } else if (status === 'finished') {
+                isRacingNow = false;
+                // 拉一次結果
+                db.ref('gameState/results').once('value', rSnap => {
+                    const results = rSnap.val();
+                    if (results) showLeaderboard(results);
+                });
             } else {
-                // idle
+                // idle / null
+                isRacingNow = false;
                 if (isAdmin) document.getElementById('admin-start-btn').style.display = 'block';
                 document.getElementById('leaderboard-overlay').style.display = 'none';
                 stopListeningSnapshot();
@@ -548,6 +558,7 @@
     let snapshotListener = null;
     let trackSetupDone = false;
     let playerOrder = []; // 保持渲染顺序固定
+    let isRacingNow = false; // 比賽進行中 flag，防止 users listener 亂切頁
 
     /**
      * 第一次進入跑道頁時，根據 raceData 建立 lane DOM
