@@ -980,7 +980,7 @@ function renderFromSnapshot(snapshot) {
             case 'slip':
                 vis.classList.add('effect-slip');
                 bub.className  = "speech-bubble bubble-danger";
-                bub.innerText  = "⛸️ 滑倒！";
+                bub.innerText  = "🤡 滑倒！";
                 break;
 
             // ── 體力耗盡（觸發那一幀）──
@@ -994,7 +994,7 @@ function renderFromSnapshot(snapshot) {
             case 'recovering':
                 vis.classList.add('effect-exhausted');
                 bub.className  = "speech-bubble bubble-recover";
-                bub.innerText  = `🩹 躺平中 ${data.recoverySecondsLeft}s`;
+                bub.innerText  = `🛌 躺平中 ${data.recoverySecondsLeft}s`;
                 break;
 
             // ── 抵達終點：根據名次顯示對應表情 ──
@@ -1030,3 +1030,4 @@ init();
 </script>
 </body>
 </html>
+
