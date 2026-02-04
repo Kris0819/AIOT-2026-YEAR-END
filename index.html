@@ -60,10 +60,10 @@
         .rule-box{margin:12px 16px 4px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;font-size:12px;color:var(--text-secondary);line-height:1.7;}
         .rule-box b{color:var(--text-primary);font-weight:600;}
         .rule-box .rule-title{color:var(--gold);font-weight:600;font-size:13px;margin-bottom:6px;display:block;}
-        #page-track{background:var(--bg-base);top:0;height:100vh;}
-        .track-bg{height:100%;position:relative;}
+        #page-track{background:var(--bg-base);top:0;height:100vh;overflow-y:auto;}
+        .track-bg{min-height:100%;position:relative;padding-bottom:96px;}
         #lanes-render-area{display:flex;flex-direction:column;height:100%;}
-        .lane{position:relative;border-bottom:1px solid #1a1a1f;flex-grow:1;display:flex;align-items:center;padding-left:8px;}
+        .lane{position:relative;border-bottom:1px solid #1a1a1f;flex-grow:1;display:flex;align-items:center;padding-left:8px;min-height:58px;}
         .lane:first-child{padding-top:18px;}
         .lane:last-child{border-bottom:none;}
         .finish-line{position:absolute;right:0;top:0;bottom:0;width:36px;background:repeating-linear-gradient(45deg,#fff,#fff 8px,#1a1a1f 8px,#1a1a1f 16px);border-left:3px solid var(--gold);z-index:5;}
@@ -140,6 +140,9 @@
             .horse-card{padding:12px;}
             .admin-persistent-ctrl{bottom:16px;left:16px;}
             .player-ctrl{bottom:16px;right:16px;}
+            #page-track{height:100dvh;}
+            .track-bg{padding-bottom:120px;}
+            .lane{min-height:52px;}
         }
         @media (max-width: 380px){
             .login-grid{grid-template-columns:1fr;}
@@ -745,9 +748,9 @@ function renderFromSnapshot(snapshot){
             bananaLayer.innerHTML=bananas.map(pos=>`<div class="banana" style="left:${pos*finishLineX}px">🍌</div>`).join('');
         }
         switch(data.activeEffect){
-            case'burst':vis.classList.add('effect-sprint');bub.className="speech-bubble bubble-sprint";bub.innerText="🔥 Sprint 衝刺！";break;
-            case'slip':vis.classList.add('effect-slip');bub.className="speech-bubble bubble-danger";bub.innerText="😵‍💫 滑倒！";break;
-            case'exhausted':vis.classList.add('effect-exhausted');bub.className="speech-bubble bubble-danger";bub.innerText="💀 已爆肝！";break;
+            case'burst':vis.classList.add('effect-sprint');bub.className="speech-bubble bubble-sprint";bub.innerText="🔥Sprint衝刺！";break;
+            case'slip':vis.classList.add('effect-slip');bub.className="speech-bubble bubble-danger";bub.innerText="😵‍💫滑倒！";break;
+            case'exhausted':vis.classList.add('effect-exhausted');bub.className="speech-bubble bubble-danger";bub.innerText="💀已爆肝！";break;
             case'recovering':vis.classList.add('effect-exhausted');bub.className="speech-bubble bubble-recover";bub.innerText=`🛌 躺平中 ${data.recoverySecondsLeft}s`;break;
             case'finished':
                 const emoji=rankEmojis[(data.finishRank||1)-1]||"🏁";
@@ -819,5 +822,3 @@ init();
 </script>
 </body>
 </html>
-
-
