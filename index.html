@@ -217,7 +217,16 @@ db.ref(".info/serverTimeOffset").on("value",s=>{serverOffset=s.val()||0;});
 // Init
 // =====================================================================
 function init(){
-    if(!myName&&!isAdmin){switchPage('page-login');}
+    if(!isAdmin&&myName){
+        db.ref(`users/${myName}`).remove();
+        db.ref(`assignments/${myName}`).remove();
+        localStorage.removeItem('race_user');
+        myName="";
+    }
+    if(!myName&&!isAdmin){
+        switchPage('page-login');
+        document.getElementById('label-user-name').innerText="GUEST";
+    }
     if(isAdmin){
         document.getElementById('admin-ctrl').style.display='flex';
         document.getElementById('admin-login-monitor').style.display='block';
