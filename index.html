@@ -63,6 +63,7 @@
         .track-bg{height:100%;position:relative;}
         #lanes-render-area{display:flex;flex-direction:column;height:100%;}
         .lane{position:relative;border-bottom:1px solid #1a1a1f;flex-grow:1;display:flex;align-items:center;padding-left:8px;}
+        .lane:first-child{padding-top:18px;}
         .lane:last-child{border-bottom:none;}
         .finish-line{position:absolute;right:0;top:0;bottom:0;width:36px;background:repeating-linear-gradient(45deg,#fff,#fff 8px,#1a1a1f 8px,#1a1a1f 16px);border-left:3px solid var(--gold);z-index:5;}
         .horse-pawn{position:absolute;left:0;display:flex;align-items:center;width:140px;transition:left 0.15s linear;}
@@ -514,8 +515,8 @@ function startAdminGameLoop(startTime,raceData,currentRound){
             pending.forEach(req=>{
                 const leader=[...runners].filter(r=>!r.finished).sort((a,b)=>b.progress-a.progress)[0];
                 if(!leader){db.ref(`gameState/bananaRequests/${req.id}`).remove();return;}
-                const base=leader.progress+0.08;
-                const pos=Math.min(0.97,Math.max(0.05,base+Math.random()*0.04));
+                const base=leader.progress+0.14;
+                const pos=Math.min(0.97,Math.max(0.05,base+Math.random()*0.06));
                 leader.bananas.push({pos,hit:false,by:req.by||""});
                 db.ref(`gameState/bananaRequests/${req.id}`).remove();
             });
