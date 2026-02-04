@@ -323,6 +323,8 @@ function listenFirebase(){
     });
     db.ref('users').on('value',snap=>{
         const u=snap.val();
+        const users=u||{};
+        names.forEach(n=>{const el=document.getElementById(`user-${n}`);users[n]?el.classList.add('taken'):el.classList.remove('taken');});
         if(!u&&myName&&!isAdmin){
             localStorage.removeItem('race_user');
             myName="";
@@ -332,8 +334,6 @@ function listenFirebase(){
             updateBananaButton();
             return;
         }
-        const users=u||{};
-        names.forEach(n=>{const el=document.getElementById(`user-${n}`);users[n]?el.classList.add('taken'):el.classList.remove('taken');});
         if(isAdmin&&adminLocked){
             switchPage('page-login');
             document.getElementById('btn-back').style.display='none';
