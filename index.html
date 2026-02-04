@@ -342,6 +342,7 @@ function listenFirebase(){
             db.ref('gameState').once('value',fullSnap=>{
                 const s=fullSnap.val();
                 if(!s||s.status!=='racing')return;
+                if(!myName&&!isAdmin){switchPage('page-login');updateBananaButton();return;}
                 switchPage('page-track');
                 setupTrackLanes(s.raceData);
                 startListeningSnapshot();
@@ -351,6 +352,7 @@ function listenFirebase(){
             // 第一輪結束 → 顯示第一輪榜單（榜單是 overlay，但先把跑道頁切掉）
             isRacingNow=false;
             stopListeningSnapshot();
+            if(!myName&&!isAdmin){switchPage('page-login');updateBananaButton();return;}
             switchPage('page-setup');
             db.ref('gameState/results').once('value',rSnap=>{
                 if(rSnap.val()) showRound1Leaderboard(rSnap.val());
@@ -359,6 +361,7 @@ function listenFirebase(){
             // 兩輪都完 → 顯示最終榜單
             isRacingNow=false;
             stopListeningSnapshot();
+            if(!myName&&!isAdmin){switchPage('page-login');updateBananaButton();return;}
             switchPage('page-setup');
             db.ref('gameState').once('value',gsSnap=>{
                 const gs=gsSnap.val()||{};
@@ -385,6 +388,7 @@ function listenFirebase(){
             if(isAdmin)document.getElementById('admin-start-btn').style.display='inline-flex';
             document.getElementById('leaderboard-overlay').style.display='none';
             stopListeningSnapshot();
+            if(!myName&&!isAdmin){switchPage('page-login');updateBananaButton();return;}
             switchPage('page-setup');
             updateBananaButton();
             // 讀 currentRound 來判斷標題
