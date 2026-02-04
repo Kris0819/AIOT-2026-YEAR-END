@@ -214,7 +214,7 @@ const db=firebase.database();
 // =====================================================================
 // 積分表
 // =====================================================================
-const POINTS = [3000,2000,1000,800,700,600,500,400,300,200,100]; // index 0 = 第1名
+const POINTS = [3000,2000,1000,800,700,600,500,400,300,200,100,50,0]; // index 0 = 第1名
 
 const horseLibrary=[
     {id:0,trait:"薪水小偷",stats:{spd:60,sta:95,burst:40,lck:70},desc:"擅長在主管視線外緩步前進，體力深不可測。"},
@@ -233,8 +233,8 @@ const horseLibrary=[
     {id:13,trait:"茶水間守門員",stats:{spd:40,sta:100,burst:20,lck:80},desc:"每天準時報到，體力全場最硬，慢慢磨到終點。"},
     {id:14,trait:"Teasm 潛水員",stats:{spd:75,sta:75,burst:50,lck:50},desc:"沒事不回訊，一旦回訊息就是一鳴驚人。"}
 ];
-const names=["Greg","Julia","Molly","DON","豪哥","Gimme","Erick","韋志","Juli","Jason","Kris"];
-const rankEmojis=["🥳","😎","😊","😐","🤔","😓","😫","😭","🥵","🤬","🦥"];
+const names=["Greg","Julia","Molly","DON","豪哥","Gimme","Erick","韋志","Juli","Jason","Kris","UTA","Dan"];
+const rankEmojis=["🥳","😎","😊","😐","🤔","😓","😫","😭","🥵","🤬","🐢","🦥","🐌"];
 let myName=localStorage.getItem('race_user')||"";
 const isAdmin=new URLSearchParams(window.location.search).get('admin')==='1';
 let serverOffset=0;
