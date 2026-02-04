@@ -260,7 +260,8 @@ function logout(){if(myName){db.ref(`users/${myName}`).remove();db.ref(`assignme
 function updateBackButton(){
     const backBtn=document.getElementById('btn-back');
     if(!backBtn) return;
-    if(!myName||isAdmin){backBtn.style.display='none';return;}
+    if(!myName){backBtn.style.display='none';return;}
+    if(isAdmin){backBtn.style.display='inline-flex';return;}
     backBtn.style.display=(currentRound===2)?'none':'inline-flex';
 }
 function updateBananaButton(){
@@ -605,6 +606,10 @@ function startAdminGameLoop(startTime,raceData,currentRound){
                             results,
                             finalResults
                         });
+                        setTimeout(()=>{
+                            db.ref('users').remove();
+                            db.ref('assignments').remove();
+                        },1500);
                     });
                 }
             },1200);
@@ -626,6 +631,7 @@ function adminStartRound2(){
     // 保留 assignments ，第二輪可直接開始
     db.ref('gameState/bananaUses').remove();
     db.ref('gameState/bananaRequests').remove();
+    db.ref('assignments').remove();
     db.ref('gameState').update({status:'idle',currentRound:2});
 }
 
