@@ -142,6 +142,10 @@
     <div class="login-grid" id="login-grid"></div>
 </div>
 <div id="page-setup" class="page">
+    <div id="admin-setup-monitor" style="display:none;" class="admin-monitor-box">
+        <div class="admin-monitor-title">[ADMIN] 即時選馬進度</div>
+        <div id="admin-status-grid-setup"></div>
+    </div>
     <div class="page-heading">
         <h2>🐎 請選擇您的參賽戰馬</h2>
     </div>
@@ -231,6 +235,7 @@ function init(){
         localStorage.removeItem('race_user');
         document.getElementById('admin-ctrl').style.display='flex';
         document.getElementById('admin-login-monitor').style.display='block';
+        document.getElementById('admin-setup-monitor').style.display='block';
         document.getElementById('label-user-name').innerText="ADMIN";
     }
     if(!myName){
@@ -318,11 +323,6 @@ function listenFirebase(){
     });
     db.ref('users').on('value',snap=>{
         const u=snap.val();
-        if(isAdmin&&adminLocked){
-            switchPage('page-login');
-            document.getElementById('btn-back').style.display='none';
-            return;
-        }
         if(!u&&myName&&!isAdmin){
             localStorage.removeItem('race_user');
             myName="";
@@ -334,6 +334,12 @@ function listenFirebase(){
         }
         const users=u||{};
         names.forEach(n=>{const el=document.getElementById(`user-${n}`);users[n]?el.classList.add('taken'):el.classList.remove('taken');});
+        if(isAdmin&&adminLocked){
+            switchPage('page-login');
+            document.getElementById('btn-back').style.display='none';
+            updateAdminMonitor(users);
+            return;
+        }
         if(myName&&users[myName]){
             if(!isRacingNow)switchPage('page-setup');
             if(!isAdmin)document.getElementById('label-user-name').innerText=myName;
@@ -440,10 +446,15 @@ function updateAdminMonitor(users){
     if(!isAdmin)return;
     db.ref('assignments').once('value',snap=>{
         const a=snap.val()||{};
-        document.getElementById('admin-status-grid').innerHTML=Object.keys(users).map(name=>`<span class="player-status-tag ${a[name]!==undefined?'ready':''}">${name}: ${a[name]!==undefined?horseLibrary[a[name]].trait:"未選馬"}</span>`).join('');
+        const html=Object.keys(users).map(name=>`<span class="player-status-tag ${a[name]!==undefined?'ready':''}">${name}: ${a[name]!==undefined?horseLibrary[a[name]].trait:"未選馬"}</span>`).join('');
+        const gridLogin=document.getElementById('admin-status-grid');
+        const gridSetup=document.getElementById('admin-status-grid-setup');
+        if(gridLogin)gridLogin.innerHTML=html;
+        if(gridSetup)gridSetup.innerHTML=html;
     });
 }
 function switchPage(id){
+    if(isAdmin&&adminLocked&&id!=='page-login') id='page-login';
     document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
     document.getElementById(id).classList.add('active');
     document.getElementById('header').style.display=(id==='page-track')?'none':'flex';
@@ -604,7 +615,8 @@ function startAdminGameLoop(startTime,raceData,currentRound){
                         db.ref('gameState').update({
                             status:'finished',
                             results,
-                            finalResults
+                            finalResults,
+                            currentRound:1
                         });
                         setTimeout(()=>{
                             db.ref('users').remove();
