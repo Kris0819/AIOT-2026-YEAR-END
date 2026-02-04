@@ -253,7 +253,7 @@ function updateBananaButton(){
     const btn=document.getElementById('banana-btn');
     if(!ctrl||!btn)return;
     const isRound2=currentRound===2;
-    const canShow=!isAdmin&&!!myName&&isRound2&&currentStatus==='racing';
+    const canShow=!!myName&&isRound2&&currentStatus==='racing';
     ctrl.style.display=canShow?'flex':'none';
     if(!canShow)return;
     const used=!!bananaUses[myName];
@@ -261,7 +261,7 @@ function updateBananaButton(){
     btn.innerText=`🍌 丟香蕉皮 (${used?0:1}/1)`;
 }
 function dropBanana(){
-    if(!myName||isAdmin)return;
+    if(!myName)return;
     if(currentRound!==2||currentStatus!=='racing')return;
     if(bananaUses[myName])return;
     db.ref(`gameState/bananaUses/${myName}`).set(true);
@@ -530,7 +530,7 @@ function startAdminGameLoop(startTime,raceData,currentRound){
             snapshot[r.name]={progress:r.progress,stamina:r.stamina,activeEffect:r.activeEffect,isRecovering:r.isRecovering,recoveryEndTime:r.recoveryEndTime,recoverySecondsLeft:r.isRecovering?Math.max(0,Math.ceil(r.recoveryEndTime-elapsed)):0,finished:r.finished,finishTime:r.finishTime,finishRank:r.finishRank};
             bananaSnapshot[r.name]=(r.bananas||[]).filter(b=>!b.hit).map(b=>b.pos);
         });
-        snapshot._bananas=bananaSnapshot;
+        snapshot.bananaMap=bananaSnapshot;
         db.ref('gameState/snapshot').set(snapshot);
 
         // 全部跑完
@@ -651,7 +651,7 @@ function renderFromSnapshot(snapshot){
     if(!area)return;
     const horseSize=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--horse-size'))||36;
     const finishLineX=Math.max(0,area.offsetWidth-FINISH_LINE_WIDTH-horseSize);
-    const bananaMap=snapshot._bananas||{};
+    const bananaMap=snapshot.bananaMap||{};
     playerOrder.forEach((name,i)=>{
         const data=snapshot[name];if(!data)return;
         const pawn=document.getElementById(`pawn-${i}`);
